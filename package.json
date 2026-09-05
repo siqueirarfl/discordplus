@@ -11,7 +11,8 @@
     "start": "electron-vite preview",
     "pack": "electron-vite build && electron-builder --dir",
     "dist": "electron-vite build && electron-builder",
-    "dist:publish": "electron-vite build && electron-builder --publish always"
+    "dist:publish": "electron-vite build && electron-builder --publish always",
+    "publish": "powershell -ExecutionPolicy Bypass -File scripts/publish.ps1"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",
