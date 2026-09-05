@@ -1,0 +1,32 @@
+{
+  "name": "discordplus",
+  "version": "1.0.0",
+  "description": "Discord+ - aplicativo de conversa local e seguro para criancas",
+  "main": "./out/main/index.js",
+  "author": "VUK",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "pack": "electron-vite build && electron-builder --dir",
+    "dist": "electron-vite build && electron-builder",
+    "dist:publish": "electron-vite build && electron-builder --publish always"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.115.0",
+    "electron-updater": "^6.8.9",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^37.0.0",
+    "electron-builder": "^26.0.0",
+    "electron-vite": "^4.0.0",
+    "vite": "^6.0.0"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true
+  }
+}
