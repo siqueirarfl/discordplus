@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function CloudLogin({ onConcluir }) {
   const [modo, setModo] = useState('entrar')
@@ -7,6 +7,11 @@ export default function CloudLogin({ onConcluir }) {
   const [erro, setErro] = useState('')
   const [aviso, setAviso] = useState('')
   const [carregando, setCarregando] = useState(false)
+  const [versao, setVersao] = useState('')
+
+  useEffect(() => {
+    window.discordplus.versao().then(setVersao).catch(() => {})
+  }, [])
 
   async function submeter(e) {
     e.preventDefault()
@@ -39,6 +44,7 @@ export default function CloudLogin({ onConcluir }) {
       <div className="login-card">
         <h1 className="login-logo">
           Discord<span>+</span>
+          {versao && <span className="login-versao">v{versao}</span>}
         </h1>
         <p className="login-sub">Entre para salvar seu histórico na nuvem</p>
 

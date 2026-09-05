@@ -52,6 +52,7 @@ contextBridge.exposeInMainWorld('discordplus', {
   estadoCloud: () => ipcRenderer.invoke('cloud:estado'),
   sincronizarCloud: () => ipcRenderer.invoke('cloud:sincronizar'),
   perfilAuto: () => ipcRenderer.invoke('perfil:auto'),
+  versao: () => ipcRenderer.invoke('app:versao'),
 
   onMensagemProativa: (callback) => {
     const handler = (_evento, dados) => callback(dados)

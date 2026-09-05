@@ -10,9 +10,11 @@ export default function Login({ onEntrar }) {
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
   const [perfis, setPerfis] = useState([])
+  const [versao, setVersao] = useState('')
 
   useEffect(() => {
     window.discordplus.listarPerfis().then(setPerfis)
+    window.discordplus.versao().then(setVersao).catch(() => {})
   }, [])
 
   async function submeter(e) {
@@ -36,6 +38,7 @@ export default function Login({ onEntrar }) {
       <div className="login-card">
         <h1 className="login-logo">
           Discord<span>+</span>
+          {versao && <span className="login-versao">v{versao}</span>}
         </h1>
         <p className="login-sub">Seu cantinho seguro para conversar</p>
 

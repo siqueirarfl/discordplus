@@ -458,6 +458,8 @@ function registrarIpc() {
     return true
   })
 
+  ipcMain.handle('app:versao', () => app.getVersion())
+
   ipcMain.handle('recovery:backup', () => criarBackup(caminhoDb, dirBackups))
 
   ipcMain.handle('recovery:listar', () => listarBackups(dirBackups))

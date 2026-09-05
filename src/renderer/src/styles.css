@@ -1180,3 +1180,11 @@ form input:focus {
   background: var(--painel-2);
 }
 
+.login-versao {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--texto-suave);
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
