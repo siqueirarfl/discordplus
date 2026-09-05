@@ -11,6 +11,7 @@ import { obterCanal, CANAIS } from '../shared/channels.js'
 import { gerarRespostaIa, gerarImagem, criarPersonagemNovo } from './ia.js'
 import { iniciarCloud, usuarioCloud, criarConta, entrarConta, sairConta, puxarSync, enviarSync, cloudAtivo, puxarAjustes } from './cloud.js'
 import { autoUpdater } from 'electron-updater'
+import { iniciarLogger, registrarLog, listarLogs, limparLogs } from './logger.js'
 
 // Carrega variáveis do .env (opcional) — ex: OPENROUTER_API_KEY / DEEPSEEK_API_KEY.
 try {
@@ -267,7 +268,8 @@ function registrarIpc() {
     const idsResposta = mencionados.length > 0 ? mencionados : idsDoCanal(canalInfo)
     for (const fato of extrairMemorias(textoBruto)) banco.salvarMemoria(autor, fato)
 
-    const planejadas = await planejarRespostas(idsResposta, texto, {
+    const pedeImagem = querImagem(texto)
+    const planejadas = pedeImagem ? [] : await planejarRespostas(idsResposta, texto, {
       historico: montarHistorico(banco.listarMensagens(canal, 20)),
       memorias: banco.listarMemorias(autor).map((m) => m.texto)
     })
@@ -405,7 +407,8 @@ function registrarIpc() {
     for (const fato of extrairMemorias(textoBruto)) banco.salvarMemoria(de, fato)
 
     const idsResposta = ehIa ? [personagemDm.id] : idsParaDm()
-    const planejadas = await planejarRespostas(idsResposta, texto, {
+    const pedeImagem = querImagem(texto)
+    const planejadas = pedeImagem ? [] : await planejarRespostas(idsResposta, texto, {
       historico: montarHistorico(banco.listarMensagensDm(de, para, 20)),
       memorias: banco.listarMemorias(de).map((m) => m.texto)
     })
@@ -472,6 +475,13 @@ function registrarIpc() {
 
   ipcMain.handle('app:instalar-atualizacao', () => {
     autoUpdater.quitAndInstall()
+    return { ok: true }
+  })
+
+  ipcMain.handle('app:logs', () => listarLogs(300))
+
+  ipcMain.handle('app:limpar-logs', () => {
+    limparLogs()
     return { ok: true }
   })
 
@@ -856,6 +866,7 @@ app.whenReady().then(() => {
   dirBackups = join(app.getPath('userData'), 'backups')
 
   banco = criarDatabase(caminhoDb)
+  iniciarLogger()
 
   // Inicializa a nuvem (Supabase) — usa o .env se existir, senão os valores padrão.
   iniciarCloud(process.env.SUPABASE_URL || SUPABASE_URL_PADRAO, process.env.SUPABASE_PUBLISHABLE_KEY || SUPABASE_PUBLISHABLE_KEY_PADRAO, banco)
@@ -890,6 +901,7 @@ app.whenReady().then(() => {
     janela?.webContents.send('app:update', { tipo: 'baixado' })
   })
   autoUpdater.on('error', (err) => {
+    registrarLog('erro', 'atualizacao', err?.message || 'Falha ao verificar atualização.')
     janela?.webContents.send('app:update', { tipo: 'erro', mensagem: err?.message || 'Falha ao verificar atualização.' })
   })
 
@@ -904,4 +916,13 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
+})
+
+// Captura erros não tratados e escreve no log local (para diagnóstico).
+process.on('uncaughtException', (err) => {
+  registrarLog('erro', 'processo', 'Exceção não tratada', err?.stack || err?.message)
+})
+
+process.on('unhandledRejection', (motivo) => {
+  registrarLog('erro', 'processo', 'Promessa rejeitada sem tratamento', motivo?.stack || motivo)
 })

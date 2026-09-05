@@ -55,6 +55,8 @@ contextBridge.exposeInMainWorld('discordplus', {
   versao: () => ipcRenderer.invoke('app:versao'),
   verificarAtualizacao: () => ipcRenderer.invoke('app:verificar-atualizacao'),
   instalarAtualizacao: () => ipcRenderer.invoke('app:instalar-atualizacao'),
+  listarLogs: () => ipcRenderer.invoke('app:logs'),
+  limparLogs: () => ipcRenderer.invoke('app:limpar-logs'),
   onAtualizacao: (callback) => {
     const handler = (_evento, dados) => callback(dados)
     ipcRenderer.on('app:update', handler)

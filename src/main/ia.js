@@ -1,6 +1,8 @@
 // Chamadas de IA online (OpenRouter / DeepSeek) para o Discord+.
 // Usa apenas o fetch nativo do Node (OpenAI-compatible). Sem dependências.
 
+import { registrarLog } from './logger.js'
+
 const BASES = {
   openrouter: 'https://openrouter.ai/api/v1',
   deepseek: 'https://api.deepseek.com'
@@ -52,6 +54,7 @@ export async function gerarRespostaIa({ provider, apiKey, modelo, personagem, te
 
   if (!res.ok) {
     const corpo = await res.text().catch(() => '')
+    registrarLog('erro', 'ia', `Resposta de texto falhou (${res.status})`, corpo.slice(0, 300))
     throw new Error(`IA respondeu ${res.status}: ${corpo.slice(0, 120)}`)
   }
 
@@ -75,7 +78,11 @@ export async function gerarImagem({ apiKey, modelo, prompt, provider = 'openrout
       headers: cabecalhos(apiKey),
       body: JSON.stringify({ model: modelo, prompt, n: 1, size: '1024x1024' })
     })
-    if (!res.ok) throw new Error(`Imagem respondeu ${res.status}`)
+    if (!res.ok) {
+      const corpo = await res.text().catch(() => '')
+      registrarLog('erro', 'ia', `Imagem (openai) falhou (${res.status})`, corpo.slice(0, 300))
+      throw new Error(`Imagem respondeu ${res.status}`)
+    }
     const dados = await res.json()
     const item = dados.data?.[0]
     const imagem = item?.b64_json ? `data:image/png;base64,${item.b64_json}` : item?.url || null
@@ -94,6 +101,8 @@ export async function gerarImagem({ apiKey, modelo, prompt, provider = 'openrout
   })
 
   if (!res.ok) {
+    const corpo = await res.text().catch(() => '')
+    registrarLog('erro', 'ia', `Imagem (openrouter) falhou (${res.status})`, corpo.slice(0, 300))
     throw new Error(`Imagem respondeu ${res.status}`)
   }
 
@@ -169,6 +178,8 @@ export async function criarPersonagemNovo({ provider, apiKey, modelo }) {
   })
 
   if (!res.ok) {
+    const corpo = await res.text().catch(() => '')
+    registrarLog('erro', 'ia', `Criar personagem falhou (${res.status})`, corpo.slice(0, 300))
     throw new Error(`Personagem respondeu ${res.status}`)
   }
 

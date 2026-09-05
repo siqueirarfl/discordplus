@@ -22,6 +22,7 @@ export default function Configuracoes({ onVoltar }) {
   const [versao, setVersao] = useState('')
   const [statusUpd, setStatusUpd] = useState(null)
   const [verificando, setVerificando] = useState(false)
+  const [logs, setLogs] = useState([])
 
   useEffect(() => {
     Promise.all([
@@ -56,6 +57,7 @@ export default function Configuracoes({ onVoltar }) {
 
   useEffect(() => {
     window.discordplus.listarPerfis().then(setPerfis).catch(() => {})
+    window.discordplus.listarLogs().then(setLogs).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -99,6 +101,15 @@ export default function Configuracoes({ onVoltar }) {
 
   function instalarAtualizacao() {
     window.discordplus.instalarAtualizacao()
+  }
+
+  function copiarLogs() {
+    navigator.clipboard.writeText(logs.join('\n')).catch(() => {})
+  }
+
+  async function limparLogsApp() {
+    await window.discordplus.limparLogs()
+    setLogs([])
   }
 
   async function salvar(e) {
@@ -289,6 +300,15 @@ export default function Configuracoes({ onVoltar }) {
           {statusUpd?.tipo === 'baixando' && <p className="config-desc">Baixando… {statusUpd.percentual}%</p>}
           {statusUpd?.tipo === 'sem-atualizacao' && <p className="ok">Você já está na versão mais recente.</p>}
           {statusUpd?.tipo === 'erro' && <p className="erro">{statusUpd.mensagem}</p>}
+        </div>
+
+        <div className="campo">
+          <span>Logs de erro</span>
+          <div className="atualizacao-acoes">
+            <button type="button" className="secundario" onClick={copiarLogs}>Copiar logs</button>
+            <button type="button" className="secundario" onClick={limparLogsApp}>Limpar</button>
+          </div>
+          <pre className="logs-caixa">{logs.length ? logs.join('\n') : 'Nenhum log ainda.'}</pre>
         </div>
 
         <div className="modal-acoes">
