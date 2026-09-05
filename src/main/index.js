@@ -30,6 +30,11 @@ let ajustesRemotos = null
 const ADMIN_USUARIO = 'admin123'
 const ADMIN_SENHA = 'admin123'
 
+// Config pública do Supabase (a publishable key é feita para o client, não é segredo).
+// O .env só existe em dev; no app empacotado usamos estes valores padrão.
+const SUPABASE_URL_PADRAO = 'https://dnrbprbrmirsxpgsnmny.supabase.co'
+const SUPABASE_PUBLISHABLE_KEY_PADRAO = 'sb_publishable_gEYdUtOX4rtZ9zzuQcaTtA_yfprUGOr'
+
 // Rate limit de login: no máximo N tentativas falhas por usuário dentro da janela.
 const MAX_TENTATIVAS_LOGIN = 5
 const JANELA_TENTATIVAS_MS = 60_000
@@ -835,8 +840,8 @@ app.whenReady().then(() => {
 
   banco = criarDatabase(caminhoDb)
 
-  // Inicializa a nuvem (Supabase) se configurada.
-  iniciarCloud(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, banco)
+  // Inicializa a nuvem (Supabase) — usa o .env se existir, senão os valores padrão.
+  iniciarCloud(process.env.SUPABASE_URL || SUPABASE_URL_PADRAO, process.env.SUPABASE_PUBLISHABLE_KEY || SUPABASE_PUBLISHABLE_KEY_PADRAO, banco)
 
   // Ajustes remotos (frases proativas etc.) — sem efeito se offline.
   puxarAjustes().then((ajustes) => { ajustesRemotos = ajustes }).catch(() => {})
