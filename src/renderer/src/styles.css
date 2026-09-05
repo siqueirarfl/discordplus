@@ -1180,6 +1180,13 @@ form input:focus {
   background: var(--painel-2);
 }
 
+.atualizacao-acoes {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .login-versao {
   font-size: 13px;
   font-weight: 500;

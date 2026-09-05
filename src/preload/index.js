@@ -53,6 +53,13 @@ contextBridge.exposeInMainWorld('discordplus', {
   sincronizarCloud: () => ipcRenderer.invoke('cloud:sincronizar'),
   perfilAuto: () => ipcRenderer.invoke('perfil:auto'),
   versao: () => ipcRenderer.invoke('app:versao'),
+  verificarAtualizacao: () => ipcRenderer.invoke('app:verificar-atualizacao'),
+  instalarAtualizacao: () => ipcRenderer.invoke('app:instalar-atualizacao'),
+  onAtualizacao: (callback) => {
+    const handler = (_evento, dados) => callback(dados)
+    ipcRenderer.on('app:update', handler)
+    return () => ipcRenderer.removeListener('app:update', handler)
+  },
 
   onMensagemProativa: (callback) => {
     const handler = (_evento, dados) => callback(dados)

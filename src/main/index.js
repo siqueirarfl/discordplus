@@ -460,6 +460,21 @@ function registrarIpc() {
 
   ipcMain.handle('app:versao', () => app.getVersion())
 
+  ipcMain.handle('app:verificar-atualizacao', async () => {
+    if (!app.isPackaged) return { erro: 'A verificação de atualização só funciona no app instalado.' }
+    try {
+      await autoUpdater.checkForUpdates()
+      return { ok: true }
+    } catch (err) {
+      return { erro: err?.message || 'Falha ao verificar atualização.' }
+    }
+  })
+
+  ipcMain.handle('app:instalar-atualizacao', () => {
+    autoUpdater.quitAndInstall()
+    return { ok: true }
+  })
+
   ipcMain.handle('recovery:backup', () => criarBackup(caminhoDb, dirBackups))
 
   ipcMain.handle('recovery:listar', () => listarBackups(dirBackups))
@@ -856,9 +871,29 @@ app.whenReady().then(() => {
   iniciarMensagensProativas()
 
   // Atualização automática (só no app empacotado; em dev é ignorado).
+  autoUpdater.autoDownload = true
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('checking-for-update', () => {
+    janela?.webContents.send('app:update', { tipo: 'verificando' })
+  })
+  autoUpdater.on('update-available', () => {
+    janela?.webContents.send('app:update', { tipo: 'disponivel' })
+  })
+  autoUpdater.on('update-not-available', () => {
+    janela?.webContents.send('app:update', { tipo: 'sem-atualizacao' })
+  })
+  autoUpdater.on('download-progress', (progresso) => {
+    janela?.webContents.send('app:update', { tipo: 'baixando', percentual: Math.floor(progresso.percent) })
+  })
+  autoUpdater.on('update-downloaded', () => {
+    janela?.webContents.send('app:update', { tipo: 'baixado' })
+  })
+  autoUpdater.on('error', (err) => {
+    janela?.webContents.send('app:update', { tipo: 'erro', mensagem: err?.message || 'Falha ao verificar atualização.' })
+  })
+
   if (app.isPackaged) {
-    autoUpdater.autoDownload = true
-    autoUpdater.autoInstallOnAppQuit = true
     autoUpdater.checkForUpdatesAndNotify().catch(() => {})
   }
 

@@ -19,6 +19,9 @@ export default function Configuracoes({ onVoltar }) {
   const [salvo, setSalvo] = useState(false)
   const [erro, setErro] = useState('')
   const [perfis, setPerfis] = useState([])
+  const [versao, setVersao] = useState('')
+  const [statusUpd, setStatusUpd] = useState(null)
+  const [verificando, setVerificando] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -55,6 +58,17 @@ export default function Configuracoes({ onVoltar }) {
     window.discordplus.listarPerfis().then(setPerfis).catch(() => {})
   }, [])
 
+  useEffect(() => {
+    window.discordplus.versao().then(setVersao).catch(() => {})
+    const cancelar = window.discordplus.onAtualizacao((dados) => {
+      setStatusUpd(dados)
+      if (dados.tipo === 'sem-atualizacao' || dados.tipo === 'erro' || dados.tipo === 'baixado') {
+        setVerificando(false)
+      }
+    })
+    return cancelar
+  }, [])
+
   function trocarProvider(p) {
     if (!modelo || modelo === MODELOS_PADRAO[provider]) setModelo(MODELOS_PADRAO[p])
     setProvider(p)
@@ -71,6 +85,20 @@ export default function Configuracoes({ onVoltar }) {
     const r = await window.discordplus.excluirUsuario(nome)
     if (r?.erro) return
     window.discordplus.listarPerfis().then(setPerfis).catch(() => {})
+  }
+
+  async function verificarAtualizacao() {
+    setVerificando(true)
+    setStatusUpd({ tipo: 'verificando' })
+    const r = await window.discordplus.verificarAtualizacao()
+    if (r?.erro) {
+      setStatusUpd({ tipo: 'erro', mensagem: r.erro })
+      setVerificando(false)
+    }
+  }
+
+  function instalarAtualizacao() {
+    window.discordplus.instalarAtualizacao()
   }
 
   async function salvar(e) {
@@ -242,6 +270,26 @@ export default function Configuracoes({ onVoltar }) {
 
         {erro && <p className="erro">{erro}</p>}
         {salvo && <p className="ok">Salvo ✓</p>}
+
+        <div className="campo">
+          <span>Atualizações</span>
+          {versao && <p className="config-desc">Versão instalada: v{versao}</p>}
+          <div className="atualizacao-acoes">
+            <button type="button" className="secundario" onClick={verificarAtualizacao} disabled={verificando}>
+              {verificando ? 'Verificando…' : 'Verificar atualizações'}
+            </button>
+            {statusUpd?.tipo === 'baixado' && (
+              <button type="button" className="primario" onClick={instalarAtualizacao}>
+                Instalar e reiniciar
+              </button>
+            )}
+          </div>
+          {statusUpd?.tipo === 'verificando' && <p className="config-desc">Verificando atualizações…</p>}
+          {statusUpd?.tipo === 'disponivel' && <p className="config-desc">Nova versão encontrada! Baixando…</p>}
+          {statusUpd?.tipo === 'baixando' && <p className="config-desc">Baixando… {statusUpd.percentual}%</p>}
+          {statusUpd?.tipo === 'sem-atualizacao' && <p className="ok">Você já está na versão mais recente.</p>}
+          {statusUpd?.tipo === 'erro' && <p className="erro">{statusUpd.mensagem}</p>}
+        </div>
 
         <div className="modal-acoes">
           <button type="button" className="secundario" onClick={onVoltar}>
