@@ -104,3 +104,17 @@ export async function puxarAjustes() {
     return null
   }
 }
+
+// Envio de logs de erro para a nuvem (diagnóstico remoto).
+// Não depende de login: a tabela error_logs aceita escrita anônima.
+export async function enviarErro({ nivel, fonte, mensagem, detalhes }) {
+  if (!supabase) return false
+  try {
+    const { error } = await supabase
+      .from('error_logs')
+      .insert({ nivel, fonte, mensagem, detalhes: String(detalhes || '').slice(0, 500) })
+    return !error
+  } catch {
+    return false
+  }
+}

@@ -6,6 +6,12 @@ const MODELOS_PADRAO = {
   deepseek: 'deepseek-chat'
 }
 
+const MODELO_IMAGEM_PADRAO = {
+  openrouter: 'openai/gpt-image-1',
+  openai: 'dall-e-3',
+  gemini: 'gemini-2.5-flash-image'
+}
+
 export default function Configuracoes({ onVoltar }) {
   const [provider, setProvider] = useState('openrouter')
   const [apiKey, setApiKey] = useState('')
@@ -74,6 +80,14 @@ export default function Configuracoes({ onVoltar }) {
   function trocarProvider(p) {
     if (!modelo || modelo === MODELOS_PADRAO[provider]) setModelo(MODELOS_PADRAO[p])
     setProvider(p)
+    setSalvo(false)
+  }
+
+  function trocarProviderImagem(p) {
+    if (!imagemModelo.trim() || imagemModelo.trim() === MODELO_IMAGEM_PADRAO[imagemProvider]) {
+      setImagemModelo(MODELO_IMAGEM_PADRAO[p])
+    }
+    setImagemProvider(p)
     setSalvo(false)
   }
 
@@ -209,10 +223,7 @@ export default function Configuracoes({ onVoltar }) {
           <span>Provedor de imagem</span>
           <select
             value={imagemProvider}
-            onChange={(e) => {
-              setImagemProvider(e.target.value)
-              setSalvo(false)
-            }}
+            onChange={(e) => trocarProviderImagem(e.target.value)}
           >
             <option value="openrouter">OpenRouter</option>
             <option value="openai">OpenAI</option>

@@ -9,9 +9,9 @@ import { filtrarMensagem, MAX_CARACTERES } from '../shared/safetyRules.js'
 import { obterPersonagem, obterResposta, PERSONAGENS, GENERICAS_IDIOMA } from '../shared/characters.js'
 import { obterCanal, CANAIS } from '../shared/channels.js'
 import { gerarRespostaIa, gerarImagem, criarPersonagemNovo } from './ia.js'
-import { iniciarCloud, usuarioCloud, criarConta, entrarConta, sairConta, puxarSync, enviarSync, cloudAtivo, puxarAjustes } from './cloud.js'
+import { iniciarCloud, usuarioCloud, criarConta, entrarConta, sairConta, puxarSync, enviarSync, cloudAtivo, puxarAjustes, enviarErro } from './cloud.js'
 import { autoUpdater } from 'electron-updater'
-import { iniciarLogger, registrarLog, listarLogs, limparLogs } from './logger.js'
+import { iniciarLogger, registrarLog, listarLogs, limparLogs, definirEnvio } from './logger.js'
 
 // Carrega variáveis do .env (opcional) — ex: OPENROUTER_API_KEY / DEEPSEEK_API_KEY.
 try {
@@ -658,7 +658,15 @@ function configImagem() {
   const enabled = banco.getConfig('ia_imagem_enabled') === '1'
   const provider = banco.getConfig('ia_imagem_provider') || 'openrouter'
   const modeloPadrao = provider === 'openai' ? 'dall-e-3' : provider === 'gemini' ? 'gemini-2.5-flash-image' : 'openai/gpt-image-1'
-  const modelo = banco.getConfig('ia_imagem_modelo') || modeloPadrao
+  let modelo = banco.getConfig('ia_imagem_modelo') || ''
+  // Se o modelo salvo não bate com o provedor (ex: 'gpt-4o-mini' que é modelo
+  // de chat sobrando de uma config antiga), usa o padrão do provedor atual.
+  const bateComProvider = provider === 'openai'
+    ? /^(dall-e|gpt-image)/i.test(modelo)
+    : provider === 'gemini'
+      ? /^(gemini|imagen)/i.test(modelo)
+      : modelo.includes('/')
+  if (!modelo || !bateComProvider) modelo = modeloPadrao
   const propria = banco.getConfig('ia_imagem_key') || ''
   const { apiKey } = configIa()
   const envKey = provider === 'gemini' ? process.env.GEMINI_API_KEY || '' : process.env.OPENROUTER_API_KEY || ''
@@ -871,6 +879,9 @@ app.whenReady().then(() => {
 
   // Inicializa a nuvem (Supabase) — usa o .env se existir, senão os valores padrão.
   iniciarCloud(process.env.SUPABASE_URL || SUPABASE_URL_PADRAO, process.env.SUPABASE_PUBLISHABLE_KEY || SUPABASE_PUBLISHABLE_KEY_PADRAO, banco)
+
+  // Logs de erro sobem para a nuvem (tabela error_logs) para diagnóstico remoto.
+  definirEnvio((e) => enviarErro(e))
 
   // Ajustes remotos (frases proativas etc.) — sem efeito se offline.
   puxarAjustes().then((ajustes) => { ajustesRemotos = ajustes }).catch(() => {})

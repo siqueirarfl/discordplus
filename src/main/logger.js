@@ -5,6 +5,7 @@ import fs from 'fs'
 
 let caminhoArquivo = null
 const logsMemoria = []
+let enviador = null
 
 export function iniciarLogger() {
   try {
@@ -14,6 +15,10 @@ export function iniciarLogger() {
   } catch {
     caminhoArquivo = null
   }
+}
+
+export function definirEnvio(fn) {
+  enviador = typeof fn === 'function' ? fn : null
 }
 
 export function registrarLog(nivel, fonte, mensagem, detalhes) {
@@ -28,6 +33,9 @@ export function registrarLog(nivel, fonte, mensagem, detalhes) {
     }
     fs.appendFileSync(caminhoArquivo, linha + extra + '\n')
   } catch {}
+  if (nivel === 'erro' && enviador) {
+    try { enviador({ nivel, fonte, mensagem, detalhes }) } catch {}
+  }
 }
 
 export function listarLogs(limite = 300) {

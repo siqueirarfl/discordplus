@@ -1,6 +1,6 @@
 {
   "name": "discordplus",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Discord+ - aplicativo de conversa local e seguro para criancas",
   "main": "./out/main/index.js",
   "author": "VUK",
