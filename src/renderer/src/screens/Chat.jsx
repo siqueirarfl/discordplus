@@ -298,7 +298,7 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
   }
 
   function pedirConfig() {
-    setAdminUsuario('')
+    setAdminUsuario('responsavel')
     setAdminSenha('')
     setErroAdmin('')
     setMostrarSenha(true)
@@ -525,7 +525,7 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
                 <span className="membro-avatar">{m.avatar || '🙂'}</span>
               )}
               <span className="membro-nome">{m.nome_exibicao || m.nome}</span>
-              {m.ehIa && <span className="tag-ia">· IA</span>}
+              {m.ehIa && <span className="tag-ia">· personagem IA</span>}
               <span className={`status-ponto ${m.status || 'offline'}`} />
             </div>
           ))}
@@ -749,7 +749,7 @@ function Mensagem({ m, meuNome, amigoAvatar, editando, editandoTexto, onIniciarE
         <div className="msg-corpo">
           <div className="msg-autor">
             <span className="tag-ia">
-              {personagem.nome} <em>· IA</em>
+              {personagem.nome} <em>· personagem IA</em>
             </span>
           </div>
           <div className="msg-texto">{m.texto}</div>

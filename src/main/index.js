@@ -5,7 +5,7 @@ import fs from 'fs'
 import { criarDatabase } from './database.js'
 import { hashSenha, verificarSenha } from './security.js'
 import { criarBackup, listarBackups, restaurarBackup } from './recovery.js'
-import { filtrarMensagem, MAX_CARACTERES } from '../shared/safetyRules.js'
+import { moderarMensagem, MAX_CARACTERES } from '../shared/safetyRules.js'
 import { obterPersonagem, obterResposta, PERSONAGENS, GENERICAS_IDIOMA } from '../shared/characters.js'
 import { obterCanal, CANAIS } from '../shared/channels.js'
 import { gerarRespostaIa, gerarImagem, criarPersonagemNovo } from './ia.js'
@@ -28,8 +28,9 @@ let criandoPersonagem = false
 let ajustesRemotos = null
 
 // Credenciais do administrador (senha master). Não vira perfil nem fica no login.
-const ADMIN_USUARIO = 'admin123'
-const ADMIN_SENHA = 'admin123'
+const ADMIN_USUARIO = 'responsavel'
+const sessoesAdmin = new Set()
+const CHAVES_CONFIG_PUBLICAS = new Set(['tema'])
 
 // Config pública do Supabase (a publishable key é feita para o client, não é segredo).
 // O .env só existe em dev; no app empacotado usamos estes valores padrão.
@@ -53,7 +54,7 @@ function criarJanela() {
     backgroundColor: '#0f0f14',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false,
+      sandbox: true,
       contextIsolation: true,
       nodeIntegration: false
     }
@@ -66,6 +67,7 @@ function criarJanela() {
     if (url.startsWith('https://') || url.startsWith('http://')) shell.openExternal(url)
     return { action: 'deny' }
   })
+  janela.webContents.on('will-navigate', (evento) => evento.preventDefault())
 
   if (process.env.ELECTRON_RENDERER_URL) {
     janela.loadURL(process.env.ELECTRON_RENDERER_URL)
@@ -151,7 +153,7 @@ function registrarIpc() {
     if (mensagem.autor !== autor) return { erro: 'Você só pode editar suas próprias mensagens.' }
     const texto = String(dados?.texto || '').slice(0, MAX_CARACTERES)
     if (!texto.trim()) return { erro: 'Mensagem vazia.' }
-    const { texto: filtrado } = filtrarMensagem(texto)
+    const { texto: filtrado } = moderarMensagem(texto)
     return { mensagem: banco.editarMensagem(id, filtrado) }
   })
 
@@ -261,8 +263,9 @@ function registrarIpc() {
     const imagem = String(dados?.imagem || '').slice(0, 5_000_000) || null
     if (!textoBruto.trim() && !imagem) return { erro: 'Mensagem vazia.' }
 
-    const { texto } = filtrarMensagem(textoBruto)
+    const { texto, dadosProtegidos } = moderarMensagem(textoBruto)
     const mensagem = banco.salvarMensagem(canal, autor, null, texto, imagem)
+    if (dadosProtegidos.length) registrarLog('aviso', 'seguranca', 'Dado pessoal protegido', dadosProtegidos.join(', '))
 
     const mencionados = personagemPorMencoes(textoBruto)
     const idsResposta = mencionados.length > 0 ? mencionados : idsDoCanal(canalInfo)
@@ -401,8 +404,9 @@ function registrarIpc() {
     const imagem = String(dados?.imagem || '').slice(0, 5_000_000) || null
     if (!textoBruto.trim() && !imagem) return { erro: 'Mensagem vazia.' }
 
-    const { texto } = filtrarMensagem(textoBruto)
+    const { texto, dadosProtegidos } = moderarMensagem(textoBruto)
     const mensagem = banco.salvarMensagemDm(de, para, texto, null, imagem)
+    if (dadosProtegidos.length) registrarLog('aviso', 'seguranca', 'Dado pessoal protegido em DM', dadosProtegidos.join(', '))
 
     for (const fato of extrairMemorias(textoBruto)) banco.salvarMemoria(de, fato)
 
@@ -428,13 +432,17 @@ function registrarIpc() {
     return { mensagem, respostas }
   })
 
-  ipcMain.handle('auth:verificar-admin', (_evento, dados) => {
+  ipcMain.handle('auth:verificar-admin', (evento, dados) => {
     const usuario = String(dados?.usuario || '')
     const senha = String(dados?.senha || '')
-    return { ok: usuario === ADMIN_USUARIO && senha === ADMIN_SENHA }
+    const hash = banco.getConfig('admin_senha_hash')
+    const ok = usuario === ADMIN_USUARIO && Boolean(hash) && verificarSenha(senha, hash)
+    if (ok) sessoesAdmin.add(evento.sender.id)
+    return { ok }
   })
 
-  ipcMain.handle('admin:excluir-usuario', (_evento, nome) => {
+  ipcMain.handle('admin:excluir-usuario', (evento, nome) => {
+    if (!sessoesAdmin.has(evento.sender.id)) return { erro: 'Acesso do responsável necessário.' }
     const alvo = String(nome || '')
     if (!banco.buscarPerfil(alvo)) return { erro: 'Usuário não encontrado.' }
     banco.excluirPerfil(alvo)
@@ -454,10 +462,16 @@ function registrarIpc() {
     }))
   )
 
-  ipcMain.handle('config:get', (_evento, chave) => banco.getConfig(String(chave)))
+  ipcMain.handle('config:get', (evento, chave) => {
+    const nome = String(chave)
+    if (!CHAVES_CONFIG_PUBLICAS.has(nome) && !sessoesAdmin.has(evento.sender.id)) return null
+    return banco.getConfig(nome)
+  })
 
-  ipcMain.handle('config:set', (_evento, chave, valor) => {
-    banco.setConfig(String(chave), valor)
+  ipcMain.handle('config:set', (evento, chave, valor) => {
+    const nome = String(chave)
+    if (!CHAVES_CONFIG_PUBLICAS.has(nome) && !sessoesAdmin.has(evento.sender.id)) return false
+    banco.setConfig(nome, valor)
     return true
   })
 
@@ -784,7 +798,9 @@ async function planejarRespostas(ids, texto, contexto = {}) {
         : obterResposta(personagem.id, texto, idioma)
     }
     baseDelay += 500 + Math.floor(Math.random() * 2500)
-    respostas.push({ id: personagem.id, personagem, texto: textoResposta, delayMs: baseDelay })
+    const respostaSegura = moderarMensagem(String(textoResposta || '')).texto.trim()
+    if (!respostaSegura) continue
+    respostas.push({ id: personagem.id, personagem, texto: respostaSegura, delayMs: baseDelay })
   }
   return respostas
 }
@@ -831,6 +847,8 @@ async function enviarMensagemProativa() {
       if (gerada) frase = gerada
     } catch {}
   }
+  frase = moderarMensagem(frase).texto.trim()
+  if (!frase) return
   banco.salvarMensagem('geral', personagem.nome, personagem.id, frase)
   janela?.webContents.send('chat:proativa', { canal: 'geral' })
 }
@@ -875,13 +893,22 @@ app.whenReady().then(() => {
   dirBackups = join(app.getPath('userData'), 'backups')
 
   banco = criarDatabase(caminhoDb)
+  if (!banco.getConfig('admin_senha_hash')) {
+    const senhaInicial = String(Math.floor(10000000 + Math.random() * 90000000))
+    banco.setConfig('admin_senha_hash', hashSenha(senhaInicial))
+    dialog.showMessageBox({
+      type: 'info', title: 'Acesso do responsável',
+      message: 'Guarde estes dados em um local seguro.',
+      detail: `Usuário: ${ADMIN_USUARIO}\nSenha inicial: ${senhaInicial}\n\nEles não serão exibidos novamente.`
+    }).catch(() => {})
+  }
   iniciarLogger()
 
   // Inicializa a nuvem (Supabase) — usa o .env se existir, senão os valores padrão.
   iniciarCloud(process.env.SUPABASE_URL || SUPABASE_URL_PADRAO, process.env.SUPABASE_PUBLISHABLE_KEY || SUPABASE_PUBLISHABLE_KEY_PADRAO, banco)
 
   // Logs de erro sobem para a nuvem (tabela error_logs) para diagnóstico remoto.
-  definirEnvio((e) => enviarErro(e))
+  if (banco.getConfig('telemetria_erros') === '1') definirEnvio((e) => enviarErro(e))
 
   // Ajustes remotos (frases proativas etc.) — sem efeito se offline.
   puxarAjustes().then((ajustes) => { ajustesRemotos = ajustes }).catch(() => {})
