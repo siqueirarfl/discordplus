@@ -41,14 +41,10 @@ scripts\build.bat
 
 O instalador sai em `dist\Discord-Plus-Setup-1.0.0.exe`.
 
-## Senha master (configurações de IA)
+## Acesso do responsável
 
-Para acessar a tela de Configurações, clique no ícone ⚙️ na lateral e entre com:
-
-- Usuário: `admin123`
-- Senha: `admin123`
-
-Essas credenciais são fixas e não aparecem no login.
+Na primeira execução, o aplicativo gera uma senha aleatória e a mostra uma única vez.
+O usuário administrativo é `responsavel`. Guarde a senha fora do alcance da criança.
 
 ## IA online (opcional)
 
@@ -106,6 +102,10 @@ src/
 - Senhas com hash scrypt (nunca em texto puro)
 - Limite de tentativas de login
 - Conteúdo filtrado antes de salvar
+- Dados pessoais e contatos externos ocultados antes de salvar ou enviar à IA
+- Personagens identificados como IA e proibidos de alegar que são crianças reais
+- Configurações sensíveis protegidas por sessão do responsável
+- Telemetria remota desativada por padrão
 - Renderer sem acesso direto ao Node (contextIsolation + preload)
 - Chaves de IA nunca ficam no código (config local ou variáveis de ambiente)
 - Nenhuma integração com o Discord oficial

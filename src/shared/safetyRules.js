@@ -19,6 +19,14 @@ export const PALAVRAS_BLOQUEADAS = [
   'porno'
 ]
 
+const PADROES_DADOS_PESSOAIS = [
+  { tipo: 'telefone', regex: /(?:\+?55\s*)?(?:\(?\d{2}\)?\s*)?9?\d{4}[-.\s]?\d{4}/g },
+  { tipo: 'email', regex: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi },
+  { tipo: 'cpf', regex: /\b\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2}\b/g },
+  { tipo: 'endereco', regex: /\b(?:rua|avenida|av\.?|travessa|alameda)\s+[\p{L}\d][\p{L}\d\s,.-]{4,}/giu },
+  { tipo: 'contato externo', regex: /\b(?:whats(?:app)?|instagram|insta|telegram|snapchat|discord)\s*[:@-]?\s*[\w.@+-]{3,}/gi }
+]
+
 // Máscara uma palavra inadequada substituindo o meio por asteriscos.
 function mascarar(palavra) {
   if (palavra.length <= 2) return '*'.repeat(palavra.length)
@@ -37,6 +45,25 @@ export function filtrarMensagem(texto) {
     }
   }
   return { texto: limpo, alterado }
+}
+
+export function protegerDadosPessoais(texto) {
+  let limpo = String(texto || '')
+  const tipos = []
+  for (const { tipo, regex } of PADROES_DADOS_PESSOAIS) {
+    regex.lastIndex = 0
+    if (!regex.test(limpo)) continue
+    regex.lastIndex = 0
+    limpo = limpo.replace(regex, '[informação protegida]')
+    tipos.push(tipo)
+  }
+  return { texto: limpo, alterado: tipos.length > 0, tipos: [...new Set(tipos)] }
+}
+
+export function moderarMensagem(texto) {
+  const dados = protegerDadosPessoais(texto)
+  const linguagem = filtrarMensagem(dados.texto)
+  return { texto: linguagem.texto, alterado: dados.alterado || linguagem.alterado, dadosProtegidos: dados.tipos }
 }
 
 // Limite de caracteres por mensagem.
