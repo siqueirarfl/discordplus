@@ -8,6 +8,6 @@ test('OpenRouter converte base64 em data URL', () => {
 })
 
 test('Gemini interpreta inlineData da resposta multimodal', () => {
-  const resposta = conteudoDeRespostaGemini({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/webp', data: 'eHl6' }] } }] } })
+  const resposta = conteudoDeRespostaGemini({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/webp', data: 'eHl6' } }] } }] })
   assert.equal(resposta.imagem, 'data:image/webp;base64,eHl6')
 })
