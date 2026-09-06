@@ -8,8 +8,8 @@ const MODELOS_PADRAO = {
 
 const MODELO_IMAGEM_PADRAO = {
   openrouter: 'openai/gpt-image-1',
-  openai: 'dall-e-3',
-  gemini: 'gemini-2.5-flash-image'
+  openai: 'gpt-image-1',
+  gemini: 'gemini-3.1-flash-image'
 }
 
 export default function Configuracoes({ onVoltar }) {
@@ -239,7 +239,7 @@ export default function Configuracoes({ onVoltar }) {
               setImagemModelo(e.target.value)
               setSalvo(false)
             }}
-            placeholder={imagemProvider === 'openai' ? 'dall-e-3' : imagemProvider === 'gemini' ? 'gemini-2.5-flash-image' : 'openai/gpt-image-1'}
+            placeholder={MODELO_IMAGEM_PADRAO[imagemProvider]}
           />
         </label>
 

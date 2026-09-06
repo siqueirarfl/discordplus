@@ -286,10 +286,10 @@ function registrarIpc() {
     agendarPersonagemNovo()
 
     const imagemGerada = await gerarImagemSePedido(texto, canal)
-    if (imagemGerada) respostas.push(imagemGerada)
+    if (imagemGerada?.mensagemSalva) respostas.push(imagemGerada)
 
     agendarPush()
-    return { mensagem, respostas }
+    return { mensagem, respostas, aviso: imagemGerada?.erro || '' }
   })
 
   ipcMain.handle('amigos:listar', (_evento, perfil) => {
@@ -426,10 +426,10 @@ function registrarIpc() {
     agendarPersonagemNovo()
 
     const imagemGerada = await gerarImagemSePedido(texto, de, true)
-    if (imagemGerada) respostas.push(imagemGerada)
+    if (imagemGerada?.mensagemSalva) respostas.push(imagemGerada)
 
     agendarPush()
-    return { mensagem, respostas }
+    return { mensagem, respostas, aviso: imagemGerada?.erro || '' }
   })
 
   ipcMain.handle('auth:verificar-admin', (evento, dados) => {
@@ -671,7 +671,7 @@ function configIa() {
 function configImagem() {
   const enabled = banco.getConfig('ia_imagem_enabled') === '1'
   const provider = banco.getConfig('ia_imagem_provider') || 'openrouter'
-  const modeloPadrao = provider === 'openai' ? 'dall-e-3' : provider === 'gemini' ? 'gemini-2.5-flash-image' : 'openai/gpt-image-1'
+  const modeloPadrao = provider === 'openai' ? 'gpt-image-1' : provider === 'gemini' ? 'gemini-3.1-flash-image' : 'openai/gpt-image-1'
   let modelo = banco.getConfig('ia_imagem_modelo') || ''
   // Se o modelo salvo não bate com o provedor (ex: 'gpt-4o-mini' que é modelo
   // de chat sobrando de uma config antiga), usa o padrão do provedor atual.
@@ -706,33 +706,41 @@ function idsParaDm() {
   return [...PERSONAGENS.map((p) => p.id), ...banco.listarPersonagensCustom().map((p) => p.id)]
 }
 
-const PEDIDOS_IMAGEM = [
-  'desenhe', 'desenha', 'desenhar', 'desenho', 'imagem', 'foto',
-  'draw', 'picture'
-]
-
 function querImagem(texto) {
   const t = String(texto || '')
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-  return PEDIDOS_IMAGEM.some((p) => t.includes(p))
+    .trim()
+  return /^(?:\/imagem\s+|desenh(?:e|a|ar)\s+|cri(?:e|ar)\s+(?:uma?\s+)?imagem\s+|gere\s+(?:uma?\s+)?imagem\s+|draw\s+|create\s+(?:an?\s+)?(?:image|picture)\s+)/i.test(t)
+}
+
+function promptDaImagem(texto) {
+  return String(texto || '')
+    .replace(/^\s*\/imagem\s+/i, '')
+    .replace(/^\s*(?:desenh(?:e|a|ar)|draw)\s+/i, '')
+    .replace(/^\s*(?:cri(?:e|ar)|gere|create)\s+(?:uma?\s+|an?\s+)?(?:imagem|image|picture)(?:\s+de)?\s*/i, '')
+    .trim()
 }
 
 async function gerarImagemSePedido(texto, destino, ehDm = false) {
   const cfg = configImagem()
-  if (!cfg.enabled || !cfg.apiKey || !querImagem(texto)) return null
+  if (!querImagem(texto)) return null
+  if (!cfg.enabled) return { erro: 'A geração de imagens está desativada nas configurações do responsável.' }
+  if (!cfg.apiKey) return { erro: 'Configure uma chave de API para gerar imagens.' }
   try {
-    const { imagem, texto: legenda } = await gerarImagem({ apiKey: cfg.apiKey, modelo: cfg.modelo, prompt: texto, provider: cfg.provider })
-    if (!imagem) return null
+    const prompt = promptDaImagem(texto)
+    if (!prompt) return { erro: 'Escreva o que você quer depois de /imagem.' }
+    const { imagem, texto: legenda } = await gerarImagem({ apiKey: cfg.apiKey, modelo: cfg.modelo, prompt, provider: cfg.provider })
+    if (!imagem) return { erro: 'O provedor respondeu sem uma imagem.' }
     const artista = obterPersonagem('pixel')
     const textoFinal = legenda || 'Desenhei para você!'
     const mensagemSalva = ehDm
       ? banco.salvarMensagemDm(artista.nome, destino, textoFinal, artista.id, imagem)
       : banco.salvarMensagem(destino, artista.nome, artista.id, textoFinal, imagem)
     return { personagem: artista, texto: textoFinal, delayMs: 6500, mensagemSalva }
-  } catch {
-    return null
+  } catch (erro) {
+    return { erro: erro?.message || 'Não foi possível gerar a imagem.' }
   }
 }
 

@@ -247,6 +247,44 @@ form input:focus {
   height: 100%;
 }
 
+.servidores {
+  width: 72px;
+  flex-shrink: 0;
+  background: #111218;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+}
+
+.servidor {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--painel-2);
+  color: var(--texto);
+  font-weight: 800;
+  font-size: 16px;
+  transition: border-radius .18s ease, background .18s ease;
+}
+
+.servidor:hover,
+.servidor.ativo {
+  border-radius: 16px;
+  background: var(--marca);
+  color: #fff;
+}
+
+.servidor-divisor {
+  width: 32px;
+  height: 2px;
+  background: var(--borda);
+}
+
+.servidor.adicionar { color: #2ecc71; }
+.servidor.adicionar:hover { color: #fff; background: #2e8b57; }
+
 .sidebar {
   width: 260px;
   flex-shrink: 0;
@@ -255,6 +293,18 @@ form input:focus {
   display: flex;
   flex-direction: column;
 }
+
+.comunidade-nome {
+  min-height: 58px;
+  padding: 11px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-bottom: 1px solid var(--borda);
+}
+
+.comunidade-nome strong { font-size: 15px; }
+.comunidade-nome span { color: var(--texto-suave); font-size: 11px; margin-top: 2px; }
 
 .sidebar-topo {
   display: flex;
@@ -496,6 +546,36 @@ form input:focus {
 .entrada button:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+.entrada .criar-imagem {
+  flex-shrink: 0;
+  padding: 0 12px;
+  background: #a855f7;
+}
+
+.entrada .criar-imagem:hover { background: #9333ea; }
+
+.aviso-entrada {
+  position: absolute;
+  left: 24px;
+  bottom: 66px;
+  max-width: min(520px, calc(100% - 48px));
+  padding: 9px 12px;
+  border-radius: 9px;
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  color: var(--texto-suave);
+  font-size: 12px;
+  box-shadow: var(--sombra);
+  z-index: 4;
+}
+
+@media (max-width: 900px) {
+  .membros { display: none; }
+  .servidores { width: 58px; }
+  .servidor { width: 42px; height: 42px; }
+  .sidebar { width: 230px; }
 }
 
 /* ---------- Canais personalizados ---------- */
@@ -1210,4 +1290,3 @@ form input:focus {
   margin-left: 10px;
   vertical-align: middle;
 }
-
