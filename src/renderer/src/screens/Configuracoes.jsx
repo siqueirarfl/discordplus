@@ -216,6 +216,7 @@ export default function Configuracoes({ onVoltar }) {
           >
             <option value="openrouter">OpenRouter</option>
             <option value="openai">OpenAI</option>
+            <option value="gemini">Google Gemini (grátis)</option>
           </select>
         </label>
 
@@ -227,7 +228,7 @@ export default function Configuracoes({ onVoltar }) {
               setImagemModelo(e.target.value)
               setSalvo(false)
             }}
-            placeholder={imagemProvider === 'openai' ? 'dall-e-3' : 'openai/gpt-image-1'}
+            placeholder={imagemProvider === 'openai' ? 'dall-e-3' : imagemProvider === 'gemini' ? 'gemini-2.5-flash-image' : 'openai/gpt-image-1'}
           />
         </label>
 

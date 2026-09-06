@@ -653,14 +653,15 @@ function configIa() {
   return { provider, apiKey, modelo, enabled }
 }
 
-// Config da geração de imagens (OpenRouter ou OpenAI; key própria opcional).
+// Config da geração de imagens (OpenRouter, OpenAI ou Gemini; key própria opcional).
 function configImagem() {
   const enabled = banco.getConfig('ia_imagem_enabled') === '1'
   const provider = banco.getConfig('ia_imagem_provider') || 'openrouter'
-  const modelo = banco.getConfig('ia_imagem_modelo') || (provider === 'openai' ? 'dall-e-3' : 'openai/gpt-image-1')
+  const modeloPadrao = provider === 'openai' ? 'dall-e-3' : provider === 'gemini' ? 'gemini-2.5-flash-image' : 'openai/gpt-image-1'
+  const modelo = banco.getConfig('ia_imagem_modelo') || modeloPadrao
   const propria = banco.getConfig('ia_imagem_key') || ''
   const { apiKey } = configIa()
-  const envKey = process.env.OPENROUTER_API_KEY || ''
+  const envKey = provider === 'gemini' ? process.env.GEMINI_API_KEY || '' : process.env.OPENROUTER_API_KEY || ''
   const apiKeyImagem = propria || (provider === 'openrouter' ? apiKey : '') || envKey
   return { enabled, provider, modelo, apiKey: apiKeyImagem }
 }

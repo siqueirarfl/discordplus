@@ -89,6 +89,34 @@ export async function gerarImagem({ apiKey, modelo, prompt, provider = 'openrout
     return { imagem, texto: '' }
   }
 
+  if (provider === 'gemini') {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
+      })
+    })
+    if (!res.ok) {
+      const corpo = await res.text().catch(() => '')
+      registrarLog('erro', 'ia', `Imagem (gemini) falhou (${res.status})`, corpo.slice(0, 300))
+      throw new Error(`Imagem respondeu ${res.status}`)
+    }
+    const dados = await res.json()
+    const partes = dados?.candidates?.[0]?.content?.parts || []
+    let imagem = null
+    let texto = ''
+    for (const p of partes) {
+      if (p?.inlineData?.data) {
+        imagem = `data:${p.inlineData.mimeType || 'image/png'};base64,${p.inlineData.data}`
+      } else if (p?.text) {
+        texto += (texto ? ' ' : '') + p.text
+      }
+    }
+    return { imagem, texto: texto.trim() }
+  }
+
   const system = `${REGRAS_SEGURANCA}\nVocê é um ilustrador. Desenhe algo fofo, colorido e adequado para criança. Sem violência, medo nem conteúdo adulto.`
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
