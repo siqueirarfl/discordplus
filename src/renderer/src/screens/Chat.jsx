@@ -12,6 +12,7 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
   const [texto, setTexto] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [imagemAnexo, setImagemAnexo] = useState('')
+  const [aviso, setAviso] = useState('')
   const fimRef = useRef(null)
 
   const [mostrarModal, setMostrarModal] = useState(false)
@@ -141,6 +142,7 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
         : await window.discordplus.enviarDm({ de: perfil.nome, para: conversa.nome, texto, imagem: imagemAnexo || undefined })
     setEnviando(false)
     if (resultado.erro) return
+    setAviso(resultado.aviso || '')
     setMensagens((atual) => [...atual, resultado.mensagem])
     setTexto('')
     setImagemAnexo('')
@@ -186,6 +188,11 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
   function selecionarSugestao(x) {
     setTexto(texto.replace(/(^|\s)@[^\s@]*$/, `$1@${x.nome} `))
     setSugestoes([])
+  }
+
+  function iniciarImagem() {
+    setTexto((atual) => atual.startsWith('/imagem ') ? atual : `/imagem ${atual}`)
+    setAviso('Descreva a imagem e envie. Exemplo: /imagem um dragão fofo jogando videogame')
   }
 
   async function enviarPedido(nome) {
@@ -341,7 +348,16 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
 
   return (
     <div className="chat">
+      <aside className="servidores" aria-label="Servidores">
+        <button className="servidor ativo" title="Comunidade Discord+">D+</button>
+        <div className="servidor-divisor" />
+        <button className="servidor adicionar" title="Comunidade local segura">＋</button>
+      </aside>
       <aside className="sidebar">
+        <div className="comunidade-nome">
+          <strong>Discord+ Kids</strong>
+          <span>Comunidade local</span>
+        </div>
         <div className="sidebar-topo">
           <button className="meu-perfil" onClick={onAbrirPerfil} title="Meu perfil">
             {perfil.foto ? (
@@ -449,6 +465,7 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
               m={m}
               meuNome={perfil.nome}
               amigoAvatar={amigoAtual?.avatar}
+              personagens={personagens}
               editando={editandoId === m.id}
               editandoTexto={editandoId === m.id ? editandoTexto : ''}
               onIniciarEdicao={() => iniciarEdicao(m)}
@@ -491,6 +508,7 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
             </div>
           )}
           <button type="button" className="icone anexar" onClick={anexarImagem} title="Anexar imagem" disabled={!conversa}>📎</button>
+          <button type="button" className="icone criar-imagem" onClick={iniciarImagem} title="Criar imagem com IA" disabled={!conversa || enviando}>🎨</button>
           <input
             value={texto}
             onChange={(e) => atualizarTexto(e.target.value)}
@@ -499,8 +517,9 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
             disabled={!conversa}
           />
           <button type="submit" disabled={(!texto.trim() && !imagemAnexo) || enviando || !conversa}>
-            Enviar
+            {enviando ? 'Enviando…' : 'Enviar'}
           </button>
+          {aviso && <div className="aviso-entrada" role="status">{aviso}</div>}
         </form>
       </main>
 
@@ -738,8 +757,10 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
   )
 }
 
-function Mensagem({ m, meuNome, amigoAvatar, editando, editandoTexto, onIniciarEdicao, onSalvarEdicao, onCancelarEdicao, onChangeEdicao, onExcluir }) {
-  const personagem = m.personagem_id ? obterPersonagem(m.personagem_id) : null
+function Mensagem({ m, meuNome, amigoAvatar, personagens, editando, editandoTexto, onIniciarEdicao, onSalvarEdicao, onCancelarEdicao, onChangeEdicao, onExcluir }) {
+  const personagem = m.personagem_id
+    ? personagens.find((p) => p.id === m.personagem_id) || obterPersonagem(m.personagem_id)
+    : null
   if (personagem) {
     return (
       <div className="msg personagem">

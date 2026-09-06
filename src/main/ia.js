@@ -2,6 +2,7 @@
 // Usa apenas o fetch nativo do Node (OpenAI-compatible). Sem dependências.
 
 import { registrarLog } from './logger.js'
+import { conteudoDeRespostaGemini, imagemDeRespostaPadrao } from '../shared/imageResponses.js'
 
 const BASES = {
   openrouter: 'https://openrouter.ai/api/v1',
@@ -86,8 +87,7 @@ export async function gerarImagem({ apiKey, modelo, prompt, provider = 'openrout
       throw new Error(`Imagem respondeu ${res.status}`)
     }
     const dados = await res.json()
-    const item = dados.data?.[0]
-    const imagem = item?.b64_json ? `data:image/png;base64,${item.b64_json}` : item?.url || null
+    const imagem = imagemDeRespostaPadrao(dados)
     return { imagem, texto: '' }
   }
 
@@ -106,27 +106,19 @@ export async function gerarImagem({ apiKey, modelo, prompt, provider = 'openrout
       throw new Error(`Imagem respondeu ${res.status}`)
     }
     const dados = await res.json()
-    const partes = dados?.candidates?.[0]?.content?.parts || []
-    let imagem = null
-    let texto = ''
-    for (const p of partes) {
-      if (p?.inlineData?.data) {
-        imagem = `data:${p.inlineData.mimeType || 'image/png'};base64,${p.inlineData.data}`
-      } else if (p?.text) {
-        texto += (texto ? ' ' : '') + p.text
-      }
-    }
-    return { imagem, texto: texto.trim() }
+    return conteudoDeRespostaGemini(dados)
   }
 
-  const system = `${REGRAS_SEGURANCA}\nVocê é um ilustrador. Desenhe algo fofo, colorido e adequado para criança. Sem violência, medo nem conteúdo adulto.`
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  const promptSeguro = `Ilustração adequada para criança, alegre e sem violência gráfica ou conteúdo adulto. Pedido: ${prompt}`
+  const res = await fetch('https://openrouter.ai/api/v1/images', {
     method: 'POST',
     headers: cabecalhos(apiKey),
     body: JSON.stringify({
       model: modelo,
-      messages: [{ role: 'user', content: prompt }],
-      modalities: ['image', 'text']
+      prompt: promptSeguro,
+      n: 1,
+      aspect_ratio: '1:1',
+      output_format: 'png'
     })
   })
 
@@ -137,25 +129,8 @@ export async function gerarImagem({ apiKey, modelo, prompt, provider = 'openrout
   }
 
   const dados = await res.json()
-  const conteudo = dados.choices?.[0]?.message?.content
-  let imagem = null
-  let texto = ''
-
-  const partes = Array.isArray(conteudo) ? conteudo : [{ type: 'text', text: conteudo }]
-  for (const p of partes) {
-    if (p && p.type === 'image_url' && p.image_url?.url) {
-      imagem = p.image_url.url
-      continue
-    }
-    const t = typeof p === 'string' ? p : p?.text || p?.output_text || ''
-    if (t.startsWith('data:image')) {
-      imagem = t
-    } else if (t) {
-      texto += (texto ? ' ' : '') + t
-    }
-  }
-
-  return { imagem, texto: texto.trim() }
+  const imagem = imagemDeRespostaPadrao(dados)
+  return { imagem, texto: '' }
 }
 
 function extrairJson(texto) {
