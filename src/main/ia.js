@@ -2,7 +2,7 @@
 // Usa apenas o fetch nativo do Node (OpenAI-compatible). Sem dependências.
 
 import { registrarLog } from './logger.js'
-import { conteudoDeRespostaGemini, imagemDeRespostaPadrao } from '../shared/imageResponses.js'
+import { conteudoDeRespostaGemini, imagemDeRespostaPadrao, textoDeRespostaPadrao } from '../shared/imageResponses.js'
 
 const BASES = {
   openrouter: 'https://openrouter.ai/api/v1',
@@ -110,15 +110,14 @@ export async function gerarImagem({ apiKey, modelo, prompt, provider = 'openrout
   }
 
   const promptSeguro = `Ilustração adequada para criança, alegre e sem violência gráfica ou conteúdo adulto. Pedido: ${prompt}`
-  const res = await fetch('https://openrouter.ai/api/v1/images', {
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: cabecalhos(apiKey),
     body: JSON.stringify({
       model: modelo,
-      prompt: promptSeguro,
-      n: 1,
-      aspect_ratio: '1:1',
-      output_format: 'png'
+      messages: [{ role: 'user', content: promptSeguro }],
+      modalities: ['image', 'text'],
+      image_config: { aspect_ratio: '1:1' }
     })
   })
 
@@ -130,7 +129,7 @@ export async function gerarImagem({ apiKey, modelo, prompt, provider = 'openrout
 
   const dados = await res.json()
   const imagem = imagemDeRespostaPadrao(dados)
-  return { imagem, texto: '' }
+  return { imagem, texto: textoDeRespostaPadrao(dados) }
 }
 
 function extrairJson(texto) {

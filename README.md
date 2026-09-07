@@ -43,8 +43,9 @@ O instalador sai em `dist\Discord-Plus-Setup-1.0.0.exe`.
 
 ## Acesso do responsável
 
-Na primeira execução, o aplicativo gera uma senha aleatória e a mostra uma única vez.
+Na primeira execução, o aplicativo abre a janela principal e então mostra uma senha aleatória.
 O usuário administrativo é `responsavel`. Guarde a senha fora do alcance da criança.
+Instalações afetadas por versões que podiam ocultar esse aviso receberão um novo acesso uma única vez.
 
 ## IA online (opcional)
 

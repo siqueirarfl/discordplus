@@ -136,12 +136,23 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
     e.preventDefault()
     if ((!texto.trim() && !imagemAnexo) || enviando || !conversa) return
     setEnviando(true)
-    const resultado =
-      conversa.tipo === 'canal'
-        ? await window.discordplus.enviar({ canal: conversa.id, autor: perfil.nome, texto, imagem: imagemAnexo || undefined })
-        : await window.discordplus.enviarDm({ de: perfil.nome, para: conversa.nome, texto, imagem: imagemAnexo || undefined })
+    setAviso('')
+    let resultado
+    try {
+      resultado =
+        conversa.tipo === 'canal'
+          ? await window.discordplus.enviar({ canal: conversa.id, autor: perfil.nome, texto, imagem: imagemAnexo || undefined })
+          : await window.discordplus.enviarDm({ de: perfil.nome, para: conversa.nome, texto, imagem: imagemAnexo || undefined })
+    } catch {
+      setAviso('Não foi possível enviar. Tente novamente.')
+      setEnviando(false)
+      return
+    }
     setEnviando(false)
-    if (resultado.erro) return
+    if (resultado.erro) {
+      setAviso(resultado.erro)
+      return
+    }
     setAviso(resultado.aviso || '')
     setMensagens((atual) => [...atual, resultado.mensagem])
     setTexto('')
@@ -351,7 +362,12 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
       <aside className="servidores" aria-label="Servidores">
         <button className="servidor ativo" title="Comunidade Discord+">D+</button>
         <div className="servidor-divisor" />
-        <button className="servidor adicionar" title="Comunidade local segura">＋</button>
+        <button
+          className="servidor adicionar"
+          title="Criar um novo canal"
+          aria-label="Criar um novo canal"
+          onClick={abrirModal}
+        >＋</button>
       </aside>
       <aside className="sidebar">
         <div className="comunidade-nome">
@@ -758,6 +774,9 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
 }
 
 function Mensagem({ m, meuNome, amigoAvatar, personagens, editando, editandoTexto, onIniciarEdicao, onSalvarEdicao, onCancelarEdicao, onChangeEdicao, onExcluir }) {
+  const horario = Number.isFinite(Number(m.criado_em))
+    ? new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(Number(m.criado_em)))
+    : ''
   const personagem = m.personagem_id
     ? personagens.find((p) => p.id === m.personagem_id) || obterPersonagem(m.personagem_id)
     : null
@@ -772,6 +791,7 @@ function Mensagem({ m, meuNome, amigoAvatar, personagens, editando, editandoText
             <span className="tag-ia">
               {personagem.nome} <em>· personagem IA</em>
             </span>
+            {horario && <time dateTime={new Date(Number(m.criado_em)).toISOString()}>{horario}</time>}
           </div>
           <div className="msg-texto">{m.texto}</div>
           {m.imagem && <img className="msg-imagem" src={m.imagem} alt="Imagem" />}
@@ -786,6 +806,7 @@ function Mensagem({ m, meuNome, amigoAvatar, personagens, editando, editandoText
       <div className="msg-corpo">
         <div className="msg-autor">
           <span>{m.autor}</span>
+          {horario && <time dateTime={new Date(Number(m.criado_em)).toISOString()}>{horario}</time>}
         </div>
         {editando ? (
           <form className="msg-edicao" onSubmit={onSalvarEdicao}>
