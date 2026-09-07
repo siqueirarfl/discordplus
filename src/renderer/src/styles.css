@@ -468,8 +468,17 @@ form input:focus {
 }
 
 .msg-autor {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: 12px;
   font-weight: 700;
+  color: var(--texto-suave);
+}
+
+.msg-autor time {
+  font-size: 10px;
+  font-weight: 500;
   color: var(--texto-suave);
 }
 

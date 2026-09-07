@@ -42,6 +42,32 @@ const MAX_TENTATIVAS_LOGIN = 5
 const JANELA_TENTATIVAS_MS = 60_000
 const tentativasLogin = new Map()
 
+function prepararAcessoInicialResponsavel() {
+  if (banco.getConfig('admin_setup_confirmado') === '1') return null
+
+  // Versões anteriores podiam abrir a caixa de senha atrás da janela principal.
+  // Enquanto o responsável não confirmar que viu os dados, gere um acesso novo.
+  const senhaInicial = String(Math.floor(10000000 + Math.random() * 90000000))
+  banco.setConfig('admin_senha_hash', hashSenha(senhaInicial))
+  return senhaInicial
+}
+
+function mostrarAcessoInicialResponsavel(senhaInicial) {
+  if (!senhaInicial) return
+  janela.once('ready-to-show', async () => {
+    await dialog.showMessageBox(janela, {
+      type: 'info',
+      title: 'Acesso do responsável',
+      message: 'Anote estes dados antes de continuar.',
+      detail: `Usuário: ${ADMIN_USUARIO}\nSenha: ${senhaInicial}\n\nA senha não será exibida novamente.`,
+      buttons: ['Já anotei'],
+      defaultId: 0,
+      noLink: true
+    })
+    banco.setConfig('admin_setup_confirmado', '1')
+  })
+}
+
 function criarJanela() {
   janela = new BrowserWindow({
     width: 1100,
@@ -901,15 +927,7 @@ app.whenReady().then(() => {
   dirBackups = join(app.getPath('userData'), 'backups')
 
   banco = criarDatabase(caminhoDb)
-  if (!banco.getConfig('admin_senha_hash')) {
-    const senhaInicial = String(Math.floor(10000000 + Math.random() * 90000000))
-    banco.setConfig('admin_senha_hash', hashSenha(senhaInicial))
-    dialog.showMessageBox({
-      type: 'info', title: 'Acesso do responsável',
-      message: 'Guarde estes dados em um local seguro.',
-      detail: `Usuário: ${ADMIN_USUARIO}\nSenha inicial: ${senhaInicial}\n\nEles não serão exibidos novamente.`
-    }).catch(() => {})
-  }
+  const senhaInicialResponsavel = prepararAcessoInicialResponsavel()
   iniciarLogger()
 
   // Inicializa a nuvem (Supabase) — usa o .env se existir, senão os valores padrão.
@@ -926,6 +944,7 @@ app.whenReady().then(() => {
 
   registrarIpc()
   criarJanela()
+  mostrarAcessoInicialResponsavel(senhaInicialResponsavel)
   iniciarMensagensProativas()
 
   // Atualização automática (só no app empacotado; em dev é ignorado).
