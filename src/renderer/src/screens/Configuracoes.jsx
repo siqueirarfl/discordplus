@@ -1,27 +1,34 @@
 import { useState, useEffect } from 'react'
 import { PERSONAGENS } from '@shared/characters.js'
 
-const MODELOS_PADRAO = {
-  openrouter: 'minimax/minimax-m3:free',
-  deepseek: 'deepseek-chat'
-}
+const MODELO_PADRAO = 'deepseek-chat'
 
-const MODELO_IMAGEM_PADRAO = {
-  openrouter: 'openai/gpt-image-1',
-  openai: 'gpt-image-1',
-  gemini: 'gemini-3.1-flash-image'
-}
+const MODELO_IMAGEM_PADRAO = 'flux-2-pro'
+
+const MODELOS_CHAT = [
+  { value: 'deepseek-chat', label: 'DeepSeek Chat (rápido)' },
+  { value: 'deepseek-reasoner', label: 'DeepSeek Reasoner (mais profundo)' }
+]
+
+const MODELOS_IMAGEM = [
+  { value: 'flux-2-pro', label: 'FLUX.2 Pro (recomendado)' },
+  { value: 'flux-2-max', label: 'FLUX.2 Max' },
+  { value: 'flux-2-flex', label: 'FLUX.2 Flex' },
+  { value: 'flux-2-klein-9b', label: 'FLUX.2 Klein 9B (econômico)' },
+  { value: 'flux-2-klein-4b', label: 'FLUX.2 Klein 4B (mais barato)' },
+  { value: 'flux-pro-1.1', label: 'FLUX 1.1 Pro' }
+]
 
 export default function Configuracoes({ onVoltar }) {
-  const [provider, setProvider] = useState('openrouter')
   const [apiKey, setApiKey] = useState('')
   const [modelo, setModelo] = useState('')
   const [enabled, setEnabled] = useState(false)
   const [inglesIds, setInglesIds] = useState([])
   const [imagemEnabled, setImagemEnabled] = useState(false)
-  const [imagemProvider, setImagemProvider] = useState('openrouter')
   const [imagemModelo, setImagemModelo] = useState('')
   const [imagemKey, setImagemKey] = useState('')
+  const [limite, setLimite] = useState('')
+  const [gasto, setGasto] = useState('')
   const [salvo, setSalvo] = useState(false)
   const [erro, setErro] = useState('')
   const [perfis, setPerfis] = useState([])
@@ -32,24 +39,24 @@ export default function Configuracoes({ onVoltar }) {
 
   useEffect(() => {
     Promise.all([
-      window.discordplus.getConfig('ia_provider'),
       window.discordplus.getConfig('ia_api_key'),
       window.discordplus.getConfig('ia_modelo'),
       window.discordplus.getConfig('ia_enabled'),
       window.discordplus.getConfig('ia_idioma_en'),
       window.discordplus.getConfig('ia_imagem_enabled'),
-      window.discordplus.getConfig('ia_imagem_provider'),
       window.discordplus.getConfig('ia_imagem_modelo'),
-      window.discordplus.getConfig('ia_imagem_key')
-    ]).then(([p, k, m, en, idi, imEn, imProv, imMo, imKey]) => {
-      if (p) setProvider(p)
+      window.discordplus.getConfig('ia_imagem_key'),
+      window.discordplus.getConfig('ia_limite_dolar'),
+      window.discordplus.getConfig('ia_gasto_dolar')
+    ]).then(([k, m, en, idi, imEn, imMo, imKey, lim, gas]) => {
       if (k) setApiKey(k)
-      if (m) setModelo(m)
+      if (m) setModelo(MODELOS_CHAT.some((x) => x.value === m) ? m : '')
       setEnabled(en === '1' || en === 'true')
-      if (imMo) setImagemModelo(imMo)
+      if (imMo) setImagemModelo(MODELOS_IMAGEM.some((x) => x.value === imMo) ? imMo : '')
       if (imKey) setImagemKey(imKey)
-      if (imProv) setImagemProvider(imProv)
       setImagemEnabled(imEn === '1' || imEn === 'true')
+      if (lim) setLimite(lim)
+      if (gas) setGasto(gas)
       if (idi) {
         try {
           const lista = JSON.parse(idi)
@@ -76,20 +83,6 @@ export default function Configuracoes({ onVoltar }) {
     })
     return cancelar
   }, [])
-
-  function trocarProvider(p) {
-    if (!modelo || modelo === MODELOS_PADRAO[provider]) setModelo(MODELOS_PADRAO[p])
-    setProvider(p)
-    setSalvo(false)
-  }
-
-  function trocarProviderImagem(p) {
-    if (!imagemModelo.trim() || imagemModelo.trim() === MODELO_IMAGEM_PADRAO[imagemProvider]) {
-      setImagemModelo(MODELO_IMAGEM_PADRAO[p])
-    }
-    setImagemProvider(p)
-    setSalvo(false)
-  }
 
   function alternarIngles(id) {
     setInglesIds((atual) => (atual.includes(id) ? atual.filter((x) => x !== id) : [...atual, id]))
@@ -134,15 +127,19 @@ export default function Configuracoes({ onVoltar }) {
       setErro('Cole a API key antes de ativar a IA online.')
       return
     }
-    await window.discordplus.setConfig('ia_provider', provider)
+    const limiteNum = String(limite).trim()
+    if (limiteNum && !/^\d+(\.\d{1,2})?$/.test(limiteNum)) {
+      setErro('O limite de gasto precisa ser um número (ex: 5.00).')
+      return
+    }
     await window.discordplus.setConfig('ia_api_key', apiKey.trim())
-    await window.discordplus.setConfig('ia_modelo', modelo.trim())
+    await window.discordplus.setConfig('ia_modelo', (modelo || MODELO_PADRAO).trim())
     await window.discordplus.setConfig('ia_enabled', enabled ? '1' : '0')
     await window.discordplus.setConfig('ia_idioma_en', JSON.stringify(inglesIds))
     await window.discordplus.setConfig('ia_imagem_enabled', imagemEnabled ? '1' : '0')
-    await window.discordplus.setConfig('ia_imagem_provider', imagemProvider)
-    await window.discordplus.setConfig('ia_imagem_modelo', imagemModelo.trim())
+    await window.discordplus.setConfig('ia_imagem_modelo', (imagemModelo || MODELO_IMAGEM_PADRAO).trim())
     await window.discordplus.setConfig('ia_imagem_key', imagemKey.trim())
+    await window.discordplus.setConfig('ia_limite_dolar', limiteNum)
     setSalvo(true)
   }
 
@@ -162,15 +159,7 @@ export default function Configuracoes({ onVoltar }) {
         </p>
 
         <label className="campo">
-          <span>Provedor</span>
-          <select value={provider} onChange={(e) => trocarProvider(e.target.value)}>
-            <option value="openrouter">OpenRouter</option>
-            <option value="deepseek">DeepSeek</option>
-          </select>
-        </label>
-
-        <label className="campo">
-          <span>API key</span>
+          <span>API key (DeepSeek)</span>
           <input
             type="password"
             value={apiKey}
@@ -178,21 +167,24 @@ export default function Configuracoes({ onVoltar }) {
               setApiKey(e.target.value)
               setSalvo(false)
             }}
-            placeholder="Cole sua chave aqui"
+            placeholder="Chave da DeepSeek — platform.deepseek.com"
             autoComplete="off"
           />
         </label>
 
         <label className="campo">
-          <span>Modelo</span>
-          <input
-            value={modelo}
+          <span>Modelo de chat</span>
+          <select
+            value={modelo || MODELO_PADRAO}
             onChange={(e) => {
               setModelo(e.target.value)
               setSalvo(false)
             }}
-            placeholder={MODELOS_PADRAO[provider]}
-          />
+          >
+            {MODELOS_CHAT.map((op) => (
+              <option key={op.value} value={op.value}>{op.label}</option>
+            ))}
+          </select>
         </label>
 
         <label className="campo-toggle">
@@ -220,31 +212,22 @@ export default function Configuracoes({ onVoltar }) {
         </label>
 
         <label className="campo">
-          <span>Provedor de imagem</span>
-          <select
-            value={imagemProvider}
-            onChange={(e) => trocarProviderImagem(e.target.value)}
-          >
-            <option value="openrouter">OpenRouter</option>
-            <option value="openai">OpenAI</option>
-            <option value="gemini">Google Gemini (grátis)</option>
-          </select>
-        </label>
-
-        <label className="campo">
           <span>Modelo de imagem</span>
-          <input
-            value={imagemModelo}
+          <select
+            value={imagemModelo || MODELO_IMAGEM_PADRAO}
             onChange={(e) => {
               setImagemModelo(e.target.value)
               setSalvo(false)
             }}
-            placeholder={MODELO_IMAGEM_PADRAO[imagemProvider]}
-          />
+          >
+            {MODELOS_IMAGEM.map((op) => (
+              <option key={op.value} value={op.value}>{op.label}</option>
+            ))}
+          </select>
         </label>
 
         <label className="campo">
-          <span>API key para imagens (opcional)</span>
+          <span>API key do FLUX (BFL)</span>
           <input
             type="password"
             value={imagemKey}
@@ -252,9 +235,27 @@ export default function Configuracoes({ onVoltar }) {
               setImagemKey(e.target.value)
               setSalvo(false)
             }}
-            placeholder="Vazio usa a key principal (se OpenRouter)"
+            placeholder="Vazio usa a FLUX_API_KEY do .env"
             autoComplete="off"
           />
+        </label>
+
+        <label className="campo">
+          <span>Limite de gasto mensal (US$)</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={limite}
+            onChange={(e) => {
+              setLimite(e.target.value)
+              setSalvo(false)
+            }}
+            placeholder="ex: 5.00 (vazio = sem limite)"
+          />
+          {gasto !== '' && (
+            <p className="config-desc">Gasto neste mês: US$ {Number(gasto).toFixed(2)}</p>
+          )}
         </label>
 
         <div className="campo">

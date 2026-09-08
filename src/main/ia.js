@@ -1,11 +1,10 @@
-// Chamadas de IA online (OpenRouter / DeepSeek) para o Discord+.
-// Usa apenas o fetch nativo do Node (OpenAI-compatible). Sem dependências.
+// Chamadas de IA online (DeepSeek para texto / FLUX da Black Forest Labs para imagem) do Discord+.
+// Usa apenas o fetch nativo do Node. Sem dependências.
 
 import { registrarLog } from './logger.js'
-import { conteudoDeRespostaGemini, imagemDeRespostaPadrao, textoDeRespostaPadrao } from '../shared/imageResponses.js'
+import { imagemDeRespostaPadrao } from '../shared/imageResponses.js'
 
 const BASES = {
-  openrouter: 'https://openrouter.ai/api/v1',
   deepseek: 'https://api.deepseek.com'
 }
 
@@ -30,9 +29,17 @@ function cabecalhos(apiKey) {
   }
 }
 
+// Custo (em dólar) de uma chamada do DeepSeek a partir do `usage`.
+function custoDeepSeek(uso) {
+  const entrada = Number(uso?.prompt_tokens || 0)
+  const saida = Number(uso?.completion_tokens || 0)
+  return (entrada / 1_000_000) * 0.27 + (saida / 1_000_000) * 1.1
+}
+
 // Gera uma resposta de texto de um personagem via IA online.
+// Devolve { texto, custo } para o controle de limite de gasto.
 export async function gerarRespostaIa({ provider, apiKey, modelo, personagem, texto, historico = [], memorias = [], idioma = 'pt' }) {
-  const base = BASES[provider] || BASES.openrouter
+  const base = BASES[provider] || 'https://api.deepseek.com'
   const IDIOMAS = { pt: 'português', en: 'inglês', es: 'espanhol', de: 'alemão', ja: 'japonês' }
   const idiomaTxt = `Responda SEMPRE em ${IDIOMAS[idioma] || 'português'}, sem traduzir depois.`
   const memoriasTxt = memorias.length
@@ -63,73 +70,69 @@ export async function gerarRespostaIa({ provider, apiKey, modelo, personagem, te
 
   const dados = await res.json()
   const conteudo = dados.choices?.[0]?.message?.content
-  if (typeof conteudo === 'string') return conteudo.trim()
-  if (Array.isArray(conteudo)) {
-    return conteudo
+  const custo = custoDeepSeek(dados?.usage)
+  let textoResposta = null
+  if (typeof conteudo === 'string') {
+    textoResposta = conteudo.trim()
+  } else if (Array.isArray(conteudo)) {
+    textoResposta = conteudo
       .map((p) => (typeof p === 'string' ? p : p?.text || p?.output_text || ''))
       .join(' ')
       .trim()
   }
-  return null
+  return { texto: textoResposta, custo }
 }
 
-// Gera uma imagem (OpenRouter ou OpenAI), devolvendo data URL ou URL.
-export async function gerarImagem({ apiKey, modelo, prompt, provider = 'openrouter' }) {
-  if (provider === 'openai') {
-    const res = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: cabecalhos(apiKey),
-      body: JSON.stringify({ model: modelo, prompt, n: 1, size: '1024x1024' })
-    })
+const BASE_FLUX = 'https://api.bfl.ai'
+
+function cabecalhosFlux(apiKey) {
+  return {
+    'Content-Type': 'application/json',
+    'x-key': apiKey
+  }
+}
+
+// Aguarda a imagem ficar pronta na API da BFL (fluxo assíncrono).
+async function aguardarResultadoFlux(pollingUrl, apiKey, tempoMaximoMs = 90000) {
+  const inicio = Date.now()
+  while (Date.now() - inicio < tempoMaximoMs) {
+    await new Promise((r) => setTimeout(r, 2000))
+    const res = await fetch(pollingUrl, { headers: { 'x-key': apiKey } })
     if (!res.ok) {
       const corpo = await res.text().catch(() => '')
-      registrarLog('erro', 'ia', `Imagem (openai) falhou (${res.status})`, corpo.slice(0, 300))
-      throw new Error(`Imagem respondeu ${res.status}`)
+      throw new Error(`Imagem (consulta) respondeu ${res.status}: ${corpo.slice(0, 120)}`)
     }
     const dados = await res.json()
-    const imagem = imagemDeRespostaPadrao(dados)
-    return { imagem, texto: '' }
-  }
-
-  if (provider === 'gemini') {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
-      })
-    })
-    if (!res.ok) {
-      const corpo = await res.text().catch(() => '')
-      registrarLog('erro', 'ia', `Imagem (gemini) falhou (${res.status})`, corpo.slice(0, 300))
-      throw new Error(`Imagem respondeu ${res.status}`)
+    if (dados.status === 'Ready') return dados
+    if (['Error', 'Request Moderated', 'Content Moderated', 'Task not found'].includes(dados.status)) {
+      return dados
     }
-    const dados = await res.json()
-    return conteudoDeRespostaGemini(dados)
   }
+  throw new Error('Imagem demorou demais para ficar pronta.')
+}
 
+// Gera uma imagem via FLUX (Black Forest Labs), devolvendo { imagem, texto, custo }.
+export async function gerarImagem({ apiKey, modelo, prompt }) {
   const promptSeguro = `Ilustração adequada para criança, alegre e sem violência gráfica ou conteúdo adulto. Pedido: ${prompt}`
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  const res = await fetch(`${BASE_FLUX}/v1/${modelo}`, {
     method: 'POST',
-    headers: cabecalhos(apiKey),
-    body: JSON.stringify({
-      model: modelo,
-      messages: [{ role: 'user', content: promptSeguro }],
-      modalities: ['image', 'text'],
-      image_config: { aspect_ratio: '1:1' }
-    })
+    headers: cabecalhosFlux(apiKey),
+    body: JSON.stringify({ prompt: promptSeguro, width: 1024, height: 1024 })
   })
-
   if (!res.ok) {
     const corpo = await res.text().catch(() => '')
-    registrarLog('erro', 'ia', `Imagem (openrouter) falhou (${res.status})`, corpo.slice(0, 300))
-    throw new Error(`Imagem respondeu ${res.status}`)
+    registrarLog('erro', 'ia', `Imagem (flux) falhou (${res.status})`, corpo.slice(0, 300))
+    throw new Error(`Imagem respondeu ${res.status}: ${corpo.slice(0, 120)}`)
   }
-
-  const dados = await res.json()
-  const imagem = imagemDeRespostaPadrao(dados)
-  return { imagem, texto: textoDeRespostaPadrao(dados) }
+  const enviado = await res.json()
+  const pollingUrl = enviado.polling_url || `${BASE_FLUX}/v1/get_result?id=${enviado.id}`
+  const resultado = await aguardarResultadoFlux(pollingUrl, apiKey)
+  const imagem = imagemDeRespostaPadrao(resultado)
+  if (!imagem) {
+    throw new Error(`Imagem: ${resultado?.status || 'sem resultado'}`)
+  }
+  const custo = (Number(resultado?.cost || enviado?.cost || 0) * 0.01)
+  return { imagem, texto: '', custo }
 }
 
 function extrairJson(texto) {
@@ -155,9 +158,9 @@ function normalizarPersonagem(obj) {
   }
 }
 
-// Inventa um personagem novo via IA, devolvendo {nome, emoji, cor, tema, saudacao}.
+// Inventa um personagem novo via IA, devolvendo { personagem, custo }.
 export async function criarPersonagemNovo({ provider, apiKey, modelo }) {
-  const base = BASES[provider] || BASES.openrouter
+  const base = BASES[provider] || 'https://api.deepseek.com'
   const system = [
     REGRAS_SEGURANCA,
     'Invente um personagem amigável e criativo para o aplicativo.',
@@ -188,6 +191,7 @@ export async function criarPersonagemNovo({ provider, apiKey, modelo }) {
   }
 
   const dados = await res.json()
+  const custo = custoDeepSeek(dados?.usage)
   const conteudo = dados.choices?.[0]?.message?.content || ''
-  return normalizarPersonagem(extrairJson(conteudo))
+  return { personagem: normalizarPersonagem(extrairJson(conteudo)), custo }
 }

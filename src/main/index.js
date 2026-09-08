@@ -9,11 +9,13 @@ import { moderarMensagem, MAX_CARACTERES } from '../shared/safetyRules.js'
 import { obterPersonagem, obterResposta, PERSONAGENS, GENERICAS_IDIOMA } from '../shared/characters.js'
 import { obterCanal, CANAIS } from '../shared/channels.js'
 import { gerarRespostaIa, gerarImagem, criarPersonagemNovo } from './ia.js'
+import { limiteAtingido, registrarGasto } from './gasto.js'
+import { PERGUNTAS_BEM_ESTAR, DESCULPAS_LIMITE, DESCULPAS_IMAGEM } from '../shared/bemEstar.js'
 import { iniciarCloud, usuarioCloud, criarConta, entrarConta, sairConta, puxarSync, enviarSync, cloudAtivo, puxarAjustes, enviarErro } from './cloud.js'
 import { autoUpdater } from 'electron-updater'
 import { iniciarLogger, registrarLog, listarLogs, limparLogs, definirEnvio } from './logger.js'
 
-// Carrega variáveis do .env (opcional) — ex: OPENROUTER_API_KEY / DEEPSEEK_API_KEY.
+// Carrega variáveis do .env (opcional) — ex: DEEPSEEK_API_KEY / FLUX_API_KEY.
 try {
   process.loadEnvFile(join(__dirname, '../../.env'))
 } catch {
@@ -685,33 +687,21 @@ function lerIdsEn() {
 
 // Config da IA de texto (chat).
 function configIa() {
-  const provider = banco.getConfig('ia_provider') || 'openrouter'
-  const envKey = provider === 'deepseek' ? process.env.DEEPSEEK_API_KEY : process.env.OPENROUTER_API_KEY
-  const apiKey = banco.getConfig('ia_api_key') || envKey || ''
-  const modelo = banco.getConfig('ia_modelo') || (provider === 'deepseek' ? 'deepseek-chat' : 'minimax/minimax-m3:free')
+  const apiKey = banco.getConfig('ia_api_key') || process.env.DEEPSEEK_API_KEY || ''
+  const modeloSalvo = banco.getConfig('ia_modelo') || ''
+  const modelo = /^deepseek/i.test(modeloSalvo) ? modeloSalvo : 'deepseek-chat'
   const enabled = banco.getConfig('ia_enabled') === '1'
-  return { provider, apiKey, modelo, enabled }
+  return { provider: 'deepseek', apiKey, modelo, enabled }
 }
 
-// Config da geração de imagens (OpenRouter, OpenAI ou Gemini; key própria opcional).
+// Config da geração de imagens (FLUX / Black Forest Labs; key própria opcional).
 function configImagem() {
   const enabled = banco.getConfig('ia_imagem_enabled') === '1'
-  const provider = banco.getConfig('ia_imagem_provider') || 'openrouter'
-  const modeloPadrao = provider === 'openai' ? 'gpt-image-1' : provider === 'gemini' ? 'gemini-3.1-flash-image' : 'openai/gpt-image-1'
-  let modelo = banco.getConfig('ia_imagem_modelo') || ''
-  // Se o modelo salvo não bate com o provedor (ex: 'gpt-4o-mini' que é modelo
-  // de chat sobrando de uma config antiga), usa o padrão do provedor atual.
-  const bateComProvider = provider === 'openai'
-    ? /^(dall-e|gpt-image)/i.test(modelo)
-    : provider === 'gemini'
-      ? /^(gemini|imagen)/i.test(modelo)
-      : modelo.includes('/')
-  if (!modelo || !bateComProvider) modelo = modeloPadrao
+  const modeloSalvo = banco.getConfig('ia_imagem_modelo') || ''
+  const modelo = /^flux/i.test(modeloSalvo) ? modeloSalvo : 'flux-2-pro'
   const propria = banco.getConfig('ia_imagem_key') || ''
-  const { apiKey } = configIa()
-  const envKey = provider === 'gemini' ? process.env.GEMINI_API_KEY || '' : process.env.OPENROUTER_API_KEY || ''
-  const apiKeyImagem = propria || (provider === 'openrouter' ? apiKey : '') || envKey
-  return { enabled, provider, modelo, apiKey: apiKeyImagem }
+  const apiKey = propria || process.env.FLUX_API_KEY || ''
+  return { enabled, modelo, apiKey }
 }
 
 // Personagens estáticos + criados pela IA.
@@ -754,12 +744,20 @@ async function gerarImagemSePedido(texto, destino, ehDm = false) {
   if (!querImagem(texto)) return null
   if (!cfg.enabled) return { erro: 'A geração de imagens está desativada nas configurações do responsável.' }
   if (!cfg.apiKey) return { erro: 'Configure uma chave de API para gerar imagens.' }
+  const artista = obterPersonagem('pixel')
+  if (limiteAtingido(banco)) {
+    const frase = DESCULPAS_IMAGEM[Math.floor(Math.random() * DESCULPAS_IMAGEM.length)]
+    const mensagemSalva = ehDm
+      ? banco.salvarMensagemDm(artista.nome, destino, frase, artista.id)
+      : banco.salvarMensagem(destino, artista.nome, artista.id, frase)
+    return { personagem: artista, texto: frase, delayMs: 5000, mensagemSalva }
+  }
   try {
     const prompt = promptDaImagem(texto)
     if (!prompt) return { erro: 'Escreva o que você quer depois de /imagem.' }
-    const { imagem, texto: legenda } = await gerarImagem({ apiKey: cfg.apiKey, modelo: cfg.modelo, prompt, provider: cfg.provider })
+    const { imagem, texto: legenda, custo } = await gerarImagem({ apiKey: cfg.apiKey, modelo: cfg.modelo, prompt })
+    if (custo) registrarGasto(banco, custo)
     if (!imagem) return { erro: 'O provedor respondeu sem uma imagem.' }
-    const artista = obterPersonagem('pixel')
     const textoFinal = legenda || 'Desenhei para você!'
     const mensagemSalva = ehDm
       ? banco.salvarMensagemDm(artista.nome, destino, textoFinal, artista.id, imagem)
@@ -773,21 +771,22 @@ async function gerarImagemSePedido(texto, destino, ehDm = false) {
 // A cada N mensagens, a IA inventa um novo amigo (em segundo plano).
 function agendarPersonagemNovo() {
   const { enabled, apiKey, provider, modelo } = configIa()
-  if (!enabled || !apiKey || criandoPersonagem) return
+  if (!enabled || !apiKey || criandoPersonagem || limiteAtingido(banco)) return
   const atual = Number(banco.getConfig('ia_contador_msgs') || '0') + 1
   banco.setConfig('ia_contador_msgs', String(atual))
   if (atual < 15) return
   banco.setConfig('ia_contador_msgs', '0')
   criandoPersonagem = true
   criarPersonagemNovo({ provider, apiKey, modelo })
-    .then((p) => {
-      if (!p) return
+    .then(({ personagem, custo }) => {
+      if (custo) registrarGasto(banco, custo)
+      if (!personagem) return
       const existentes = banco.listarPersonagensCustom().map((x) => x.nome.toLowerCase())
-      if (existentes.includes(p.nome.toLowerCase())) return
+      if (existentes.includes(personagem.nome.toLowerCase())) return
       const id = `p-${randomUUID().slice(0, 8)}`
-      banco.criarPersonagemCustom(id, p.nome, p.emoji, p.cor, p.tema, p.saudacao)
+      banco.criarPersonagemCustom(id, personagem.nome, personagem.emoji, personagem.cor, personagem.tema, personagem.saudacao)
       if (obterCanal('geral') && !banco.listarCanaisExcluidos().has('geral')) {
-        banco.salvarMensagem('geral', 'Sistema', null, `Um novo amigo chegou: ${p.emoji} ${p.nome}! ${p.saudacao}`)
+        banco.salvarMensagem('geral', 'Sistema', null, `Um novo amigo chegou: ${personagem.emoji} ${personagem.nome}! ${personagem.saudacao}`)
       }
     })
     .catch(() => {})
@@ -811,6 +810,7 @@ async function planejarRespostas(ids, texto, contexto = {}) {
   const quantos = 1 + Math.floor(Math.random() * maxRespondentes)
   const escolhidos = embaralhar(disponiveis).slice(0, quantos)
   const { provider, apiKey, modelo, enabled } = configIa()
+  const semCredito = enabled && apiKey && limiteAtingido(banco)
   let baseDelay = 600 + Math.floor(Math.random() * 2000)
   const respostas = []
   for (const personagem of escolhidos) {
@@ -818,14 +818,21 @@ async function planejarRespostas(ids, texto, contexto = {}) {
     const ehCustom = !obterPersonagem(personagem.id)
     let textoResposta = null
     if (enabled && apiKey) {
-      try {
-        textoResposta = await gerarRespostaIa({ provider, apiKey, modelo, personagem, texto, historico, memorias, idioma })
-      } catch {
-        textoResposta = null
+      if (semCredito) {
+        // Limite de gasto atingido: responde com uma desculpa "humana".
+        textoResposta = DESCULPAS_LIMITE[Math.floor(Math.random() * DESCULPAS_LIMITE.length)]
+      } else {
+        try {
+          const r = await gerarRespostaIa({ provider, apiKey, modelo, personagem, texto, historico, memorias, idioma })
+          if (r?.custo) registrarGasto(banco, r.custo)
+          textoResposta = r?.texto || null
+        } catch {
+          textoResposta = null
+        }
+        // IA habilitada mas indisponível: o personagem fica em silêncio,
+        // em vez de cair numa resposta pronta que revelaria que é um robô.
+        if (!textoResposta) continue
       }
-      // IA habilitada mas indisponível: o personagem fica em silêncio,
-      // em vez de cair numa resposta pronta que revelaria que é um robô.
-      if (!textoResposta) continue
     } else {
       textoResposta = ehCustom
         ? (GENERICAS_IDIOMA[idioma] || (idioma === 'en' ? ['That sounds fun! Tell me more.'] : ['Que legal! Me conta mais.']))[0]
@@ -865,21 +872,36 @@ async function enviarMensagemProativa() {
   const frases = (ajustesRemotos && Array.isArray(ajustesRemotos.frases_proativas) && ajustesRemotos.frases_proativas.length > 0)
     ? ajustesRemotos.frases_proativas
     : FRASES_PROATIVAS
-  let frase = frases[Math.floor(Math.random() * frases.length)]
-  if (enabled && apiKey) {
+
+  // Perguntas de bem-estar (locais, sem custo) aparecem de vez em quando,
+  // treinando a criança para um convívio social saudável.
+  const usaBemEstar = Math.random() < 0.4
+
+  let frase = null
+  if (enabled && apiKey && !limiteAtingido(banco)) {
     const idioma = personagem.idioma || 'pt'
     try {
-      const gerada = await gerarRespostaIa({
+      const r = await gerarRespostaIa({
         provider,
         apiKey,
         modelo,
         personagem,
         idioma,
         memorias: [],
-        texto: 'Puxe um assunto divertido sobre Roblox, desenhos ou jogos para a turma, sem que ninguém tenha perguntado nada.'
+        texto: usaBemEstar
+          ? 'Pergunte algo sobre o dia da criança, como foi na escola, o clima ou como ela está se sentindo, de forma leve e amigável.'
+          : 'Puxe um assunto divertido sobre Roblox, desenhos ou jogos para a turma, sem que ninguém tenha perguntado nada.'
       })
-      if (gerada) frase = gerada
+      if (r?.custo) registrarGasto(banco, r.custo)
+      if (r?.texto) frase = r.texto
     } catch {}
+  }
+  if (!frase) {
+    if (usaBemEstar) {
+      frase = PERGUNTAS_BEM_ESTAR[Math.floor(Math.random() * PERGUNTAS_BEM_ESTAR.length)]
+    } else {
+      frase = frases[Math.floor(Math.random() * frases.length)]
+    }
   }
   frase = moderarMensagem(frase).texto.trim()
   if (!frase) return

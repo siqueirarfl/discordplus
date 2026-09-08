@@ -1,24 +1,22 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { conteudoDeRespostaGemini, imagemDeRespostaPadrao, textoDeRespostaPadrao } from '../src/shared/imageResponses.js'
+import { imagemDeRespostaPadrao } from '../src/shared/imageResponses.js'
 
-test('OpenRouter converte base64 em data URL', () => {
+test('OpenAI converte base64 em data URL', () => {
   const imagem = imagemDeRespostaPadrao({ data: [{ b64_json: 'YWJj', media_type: 'image/png' }] })
   assert.equal(imagem, 'data:image/png;base64,YWJj')
 })
 
-test('Gemini interpreta inlineData da resposta multimodal', () => {
-  const resposta = conteudoDeRespostaGemini({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/webp', data: 'eHl6' } }] } }] })
-  assert.equal(resposta.imagem, 'data:image/webp;base64,eHl6')
+test('OpenAI devolve URL quando response_format é url', () => {
+  const imagem = imagemDeRespostaPadrao({ data: [{ url: 'https://exemplo.com/imagem.png' }] })
+  assert.equal(imagem, 'https://exemplo.com/imagem.png')
 })
 
-test('OpenRouter interpreta imagem multimodal de chat/completions', () => {
-  const resposta = {
-    choices: [{ message: {
-      content: 'Aqui está seu desenho!',
-      images: [{ type: 'image_url', image_url: { url: 'data:image/png;base64,YWJj' } }]
-    } }]
-  }
-  assert.equal(imagemDeRespostaPadrao(resposta), 'data:image/png;base64,YWJj')
-  assert.equal(textoDeRespostaPadrao(resposta), 'Aqui está seu desenho!')
+test('FLUX (BFL) devolve a URL em result.sample', () => {
+  const imagem = imagemDeRespostaPadrao({ status: 'Ready', result: { sample: 'https://api.bfl.ai/imagem.png' } })
+  assert.equal(imagem, 'https://api.bfl.ai/imagem.png')
+})
+
+test('Resposta sem imagem devolve null', () => {
+  assert.equal(imagemDeRespostaPadrao({ status: 'Error' }), null)
 })
