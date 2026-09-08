@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import Icone from '../Icones.jsx'
 
 const AVATARES = ['😀', '🐱', '🐶', '🦊', '🐼', '🐸', '🦄', '🐯', '🐰', '🦁', '🐵', '🐢']
 
@@ -92,7 +93,7 @@ export default function Login({ onEntrar }) {
           {erro && <p className="erro">{erro}</p>}
 
           <button className="primary" type="submit" disabled={carregando}>
-            {carregando ? 'Aguarde…' : modo === 'criar' ? 'Criar perfil' : 'Entrar'}
+            <Icone nome="user" /> {carregando ? 'Aguarde…' : modo === 'criar' ? 'Criar perfil' : 'Entrar'}
           </button>
         </form>
 

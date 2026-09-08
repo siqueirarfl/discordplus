@@ -1407,3 +1407,18 @@ form input:focus {
 .msg-texto {
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
 }
+
+.senha-gerada {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-align: center;
+  padding: 14px;
+  margin: 12px 0;
+  border-radius: 10px;
+  background: var(--painel-2);
+  border: 1px solid var(--marca);
+  color: var(--texto);
+  user-select: all;
+}

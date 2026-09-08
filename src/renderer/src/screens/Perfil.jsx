@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Icone from '../Icones.jsx'
 
 const AVATARES = ['😀', '🐱', '🐶', '🦊', '🐼', '🐸', '🦄', '🐯', '🐰', '🦁', '🐵', '🐢']
 
@@ -52,7 +53,7 @@ export default function Perfil({ perfil, onVoltar, onAtualizar }) {
         <div className="perfil-foto">
           {foto ? <img src={foto} alt="Foto de perfil" /> : <span>{avatar}</span>}
           <button type="button" className="secundario" onClick={escolherFoto}>
-            Trocar foto
+            <Icone nome="camera" /> Trocar foto
           </button>
         </div>
 

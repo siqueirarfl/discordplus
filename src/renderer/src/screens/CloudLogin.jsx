@@ -7,6 +7,7 @@ export default function CloudLogin({ onConcluir }) {
   const [erro, setErro] = useState('')
   const [aviso, setAviso] = useState('')
   const [carregando, setCarregando] = useState(false)
+  const [recuperando, setRecuperando] = useState(false)
   const [versao, setVersao] = useState('')
 
   useEffect(() => {
@@ -37,6 +38,25 @@ export default function CloudLogin({ onConcluir }) {
       return
     }
     onConcluir(resultado.perfil)
+  }
+
+  async function recuperar(e) {
+    e.preventDefault()
+    setErro('')
+    setAviso('')
+    if (!email.trim()) {
+      setErro('Digite seu e-mail para receber o link.')
+      return
+    }
+    setCarregando(true)
+    const r = await window.discordplus.recuperarSenhaCloud(email.trim())
+    setCarregando(false)
+    if (r?.erro) {
+      setErro(r.erro)
+      return
+    }
+    setAviso('Se o e-mail existir, enviamos um link de recuperação. Confira sua caixa de entrada.')
+    setRecuperando(false)
   }
 
   return (
@@ -83,22 +103,43 @@ export default function CloudLogin({ onConcluir }) {
             maxLength={120}
           />
 
-          <label htmlFor="cloud-senha">Senha</label>
-          <input
-            id="cloud-senha"
-            type="password"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            autoComplete="off"
-          />
+          {!recuperando && (
+            <>
+              <label htmlFor="cloud-senha">Senha</label>
+              <input
+                id="cloud-senha"
+                type="password"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                autoComplete="off"
+              />
+            </>
+          )}
 
           {erro && <p className="erro">{erro}</p>}
           {aviso && <p className="ok">{aviso}</p>}
 
-          <button className="primary" type="submit" disabled={carregando}>
-            {carregando ? 'Aguarde…' : modo === 'criar' ? 'Criar conta' : 'Entrar'}
-          </button>
+          {recuperando ? (
+            <button className="primary" type="button" onClick={recuperar} disabled={carregando}>
+              {carregando ? 'Aguarde…' : 'Enviar link de recuperação'}
+            </button>
+          ) : (
+            <button className="primary" type="submit" disabled={carregando}>
+              {carregando ? 'Aguarde…' : modo === 'criar' ? 'Criar conta' : 'Entrar'}
+            </button>
+          )}
         </form>
+
+        {!recuperando && modo === 'entrar' && (
+          <button className="secundario cloud-esqueci" onClick={() => { setRecuperando(true); setErro(''); setAviso('') }}>
+            Esqueci minha senha?
+          </button>
+        )}
+        {recuperando && (
+          <button className="secundario cloud-esqueci" onClick={() => { setRecuperando(false); setErro(''); setAviso('') }}>
+            ← Voltar ao login
+          </button>
+        )}
 
         <button className="secundario cloud-offline" onClick={() => onConcluir(null)} disabled={carregando}>
           Usar sem conta (offline)

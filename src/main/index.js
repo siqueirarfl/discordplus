@@ -11,7 +11,7 @@ import { obterCanal, CANAIS } from '../shared/channels.js'
 import { gerarRespostaIa, gerarImagem, criarPersonagemNovo } from './ia.js'
 import { limiteAtingido, registrarGasto } from './gasto.js'
 import { PERGUNTAS_BEM_ESTAR, DESCULPAS_LIMITE, DESCULPAS_IMAGEM } from '../shared/bemEstar.js'
-import { iniciarCloud, usuarioCloud, criarConta, entrarConta, sairConta, puxarSync, enviarSync, cloudAtivo, puxarAjustes, enviarErro } from './cloud.js'
+import { iniciarCloud, usuarioCloud, criarConta, entrarConta, sairConta, puxarSync, enviarSync, cloudAtivo, puxarAjustes, enviarErro, recuperarSenha } from './cloud.js'
 import { autoUpdater } from 'electron-updater'
 import { iniciarLogger, registrarLog, listarLogs, limparLogs, definirEnvio } from './logger.js'
 
@@ -506,6 +506,15 @@ function registrarIpc() {
     return { ok: true }
   })
 
+  // Recuperação da senha do responsável: gera uma nova e encerra as sessões.
+  // Chamado pelo menu escondido (5 cliques no logo). Não exige login.
+  ipcMain.handle('admin:recuperar-senha', (evento) => {
+    const nova = String(Math.floor(10000000 + Math.random() * 90000000))
+    banco.setConfig('admin_senha_hash', hashSenha(nova))
+    sessoesAdmin.delete(evento.sender.id)
+    return { ok: true, senha: nova }
+  })
+
   ipcMain.handle('personagens:listar-custom', () => banco.listarPersonagensCustom())
 
   ipcMain.handle('personagens:listar', () =>
@@ -596,6 +605,10 @@ function registrarIpc() {
   })
 
   ipcMain.handle('cloud:sair', () => sairConta())
+
+  ipcMain.handle('cloud:recuperar-senha', (_evento, email) =>
+    recuperarSenha(String(email || '').trim())
+  )
 
   ipcMain.handle('perfil:auto', async () => {
     const u = await usuarioCloud()

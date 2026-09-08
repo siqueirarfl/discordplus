@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import Icone from '../Icones.jsx'
 import { PERSONAGENS } from '@shared/characters.js'
 import { avatarSrc } from '../avatares.js'
 
@@ -309,7 +310,7 @@ export default function Configuracoes({ onVoltar }) {
               <div key={p.nome} className="pedido-linha">
                 <span className="pedido-nome">{p.nome}</span>
                 <button type="button" className="secundario" onClick={() => excluirUsuario(p.nome)}>
-                  Excluir
+                  <Icone nome="trash" /> Excluir
                 </button>
               </div>
             ))}
@@ -334,7 +335,7 @@ export default function Configuracoes({ onVoltar }) {
               autoComplete="off"
             />
             <button type="button" className="secundario" onClick={alterarSenha}>
-              Alterar senha
+              <Icone nome="lock" /> Alterar senha
             </button>
           </div>
           {avisoSenha && <p className={avisoSenha.tipo === 'ok' ? 'ok' : 'erro'}>{avisoSenha.mensagem}</p>}
@@ -348,7 +349,7 @@ export default function Configuracoes({ onVoltar }) {
           {versao && <p className="config-desc">Versão instalada: v{versao}</p>}
           <div className="atualizacao-acoes">
             <button type="button" className="secundario" onClick={verificarAtualizacao} disabled={verificando}>
-              {verificando ? 'Verificando…' : 'Verificar atualizações'}
+              <Icone nome="refresh" /> {verificando ? 'Verificando…' : 'Verificar atualizações'}
             </button>
             {statusUpd?.tipo === 'baixado' && (
               <button type="button" className="primario" onClick={instalarAtualizacao}>

@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('discordplus', {
   listarPersonagens: () => ipcRenderer.invoke('personagens:listar'),
   excluirUsuario: (nome) => ipcRenderer.invoke('admin:excluir-usuario', nome),
   alterarSenhaResponsavel: (dados) => ipcRenderer.invoke('admin:alterar-senha', dados),
+  recuperarSenhaResponsavel: () => ipcRenderer.invoke('admin:recuperar-senha'),
 
   listarAmigos: (perfil) => ipcRenderer.invoke('amigos:listar', perfil),
   listarPedidos: (perfil) => ipcRenderer.invoke('amigos:pedidos', perfil),
@@ -50,6 +51,7 @@ contextBridge.exposeInMainWorld('discordplus', {
 
   entrarConta: (dados) => ipcRenderer.invoke('cloud:entrar', dados),
   criarConta: (dados) => ipcRenderer.invoke('cloud:criar-conta', dados),
+  recuperarSenhaCloud: (email) => ipcRenderer.invoke('cloud:recuperar-senha', email),
   sairConta: () => ipcRenderer.invoke('cloud:sair'),
   estadoCloud: () => ipcRenderer.invoke('cloud:estado'),
   sincronizarCloud: () => ipcRenderer.invoke('cloud:sincronizar'),

@@ -60,6 +60,13 @@ export async function entrarConta(email, senha) {
   return { ok: true, usuario: data.user ? { id: data.user.id, email: data.user.email } : null }
 }
 
+export async function recuperarSenha(email) {
+  if (!supabase) return { erro: 'Nuvem não configurada.' }
+  const { error } = await supabase.auth.resetPasswordForEmail(email)
+  if (error) return { erro: error.message }
+  return { ok: true }
+}
+
 export async function sairConta() {
   if (!supabase) return { ok: true }
   await supabase.auth.signOut().catch(() => {})

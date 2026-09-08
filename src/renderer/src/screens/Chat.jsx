@@ -13,6 +13,10 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
   const [conversa, setConversa] = useState(null)
   const [mensagens, setMensagens] = useState([])
   const [naoLidas, setNaoLidas] = useState({})
+  const [modalRecuperacao, setModalRecuperacao] = useState(false)
+  const [senhaNova, setSenhaNova] = useState('')
+  const [cliquesLogo, setCliquesLogo] = useState(0)
+  const ultimoCliqueLogoRef = useRef(0)
   const [texto, setTexto] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [imagemAnexo, setImagemAnexo] = useState('')
@@ -80,6 +84,26 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
     const total = Object.values(naoLidas).reduce((a, b) => a + (b || 0), 0)
     document.title = total > 0 ? `(${total}) Discord+` : 'Discord+'
   }, [naoLidas])
+
+  function aoClicarLogo() {
+    const agora = Date.now()
+    if (agora - ultimoCliqueLogoRef.current > 3000) setCliquesLogo(1)
+    else setCliquesLogo((n) => n + 1)
+    ultimoCliqueLogoRef.current = agora
+  }
+
+  useEffect(() => {
+    if (cliquesLogo >= 5) {
+      setCliquesLogo(0)
+      setSenhaNova('')
+      setModalRecuperacao(true)
+    }
+  }, [cliquesLogo])
+
+  async function gerarNovaSenhaResponsavel() {
+    const r = await window.discordplus.recuperarSenhaResponsavel()
+    if (r?.senha) setSenhaNova(r.senha)
+  }
 
   async function recarregarMensagens() {
     const c = conversaRef.current
@@ -378,7 +402,7 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
   return (
     <div className="chat">
       <aside className="servidores" aria-label="Servidores">
-        <button className="servidor ativo" title="Comunidade Discord+">D+</button>
+        <button className="servidor ativo" title="Comunidade Discord+" onClick={aoClicarLogo}>D+</button>
         <div className="servidor-divisor" />
         <button
           className="servidor adicionar"
@@ -785,6 +809,38 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {modalRecuperacao && (
+        <div className="modal-fundo" onClick={() => setModalRecuperacao(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3>Recuperar acesso do responsável</h3>
+            <p className="conversa-desc">
+              Gere uma nova senha para o responsável. A senha atual será substituída.
+            </p>
+
+            {senhaNova ? (
+              <>
+                <p className="ok">Nova senha gerada:</p>
+                <div className="senha-gerada">{senhaNova}</div>
+                <p className="config-desc">Anote agora. Ela não será exibida de novo.</p>
+              </>
+            ) : (
+              <p className="config-desc">Clique para gerar uma nova senha.</p>
+            )}
+
+            <div className="modal-acoes">
+              <button type="button" className="secundario" onClick={() => setModalRecuperacao(false)}>
+                Fechar
+              </button>
+              {!senhaNova && (
+                <button type="button" className="primario" onClick={gerarNovaSenhaResponsavel}>
+                  Gerar nova senha
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
