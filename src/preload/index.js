@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld('discordplus', {
   listarPersonagensCustom: () => ipcRenderer.invoke('personagens:listar-custom'),
   listarPersonagens: () => ipcRenderer.invoke('personagens:listar'),
   excluirUsuario: (nome) => ipcRenderer.invoke('admin:excluir-usuario', nome),
+  alterarSenhaResponsavel: (dados) => ipcRenderer.invoke('admin:alterar-senha', dados),
 
   listarAmigos: (perfil) => ipcRenderer.invoke('amigos:listar', perfil),
   listarPedidos: (perfil) => ipcRenderer.invoke('amigos:pedidos', perfil),

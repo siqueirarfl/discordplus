@@ -37,6 +37,9 @@ export default function Configuracoes({ onVoltar }) {
   const [statusUpd, setStatusUpd] = useState(null)
   const [verificando, setVerificando] = useState(false)
   const [logs, setLogs] = useState([])
+  const [senhaAtual, setSenhaAtual] = useState('')
+  const [novaSenha, setNovaSenha] = useState('')
+  const [avisoSenha, setAvisoSenha] = useState(null)
 
   useEffect(() => {
     Promise.all([
@@ -95,6 +98,22 @@ export default function Configuracoes({ onVoltar }) {
     const r = await window.discordplus.excluirUsuario(nome)
     if (r?.erro) return
     window.discordplus.listarPerfis().then(setPerfis).catch(() => {})
+  }
+
+  async function alterarSenha() {
+    setAvisoSenha(null)
+    if (!senhaAtual || !novaSenha) {
+      setAvisoSenha({ tipo: 'erro', mensagem: 'Preencha a senha atual e a nova senha.' })
+      return
+    }
+    const r = await window.discordplus.alterarSenhaResponsavel({ senhaAtual, novaSenha })
+    if (r?.erro) {
+      setAvisoSenha({ tipo: 'erro', mensagem: r.erro })
+      return
+    }
+    setSenhaAtual('')
+    setNovaSenha('')
+    setAvisoSenha({ tipo: 'ok', mensagem: 'Senha do responsável alterada com sucesso.' })
   }
 
   async function verificarAtualizacao() {
@@ -295,6 +314,30 @@ export default function Configuracoes({ onVoltar }) {
               </div>
             ))}
           </div>
+        </div>
+
+        <div className="campo">
+          <span>Senha do responsável</span>
+          <div className="atualizacao-acoes">
+            <input
+              type="password"
+              value={senhaAtual}
+              onChange={(e) => setSenhaAtual(e.target.value)}
+              placeholder="Senha atual"
+              autoComplete="off"
+            />
+            <input
+              type="password"
+              value={novaSenha}
+              onChange={(e) => setNovaSenha(e.target.value)}
+              placeholder="Nova senha (mín. 4 caracteres)"
+              autoComplete="off"
+            />
+            <button type="button" className="secundario" onClick={alterarSenha}>
+              Alterar senha
+            </button>
+          </div>
+          {avisoSenha && <p className={avisoSenha.tipo === 'ok' ? 'ok' : 'erro'}>{avisoSenha.mensagem}</p>}
         </div>
 
         {erro && <p className="erro">{erro}</p>}

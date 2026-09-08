@@ -495,6 +495,17 @@ function registrarIpc() {
     return { ok: true }
   })
 
+  ipcMain.handle('admin:alterar-senha', (evento, dados) => {
+    if (!sessoesAdmin.has(evento.sender.id)) return { erro: 'Acesso do responsável necessário.' }
+    const atual = String(dados?.senhaAtual || '')
+    const nova = String(dados?.novaSenha || '')
+    const hash = banco.getConfig('admin_senha_hash')
+    if (!verificarSenha(atual, hash)) return { erro: 'Senha atual incorreta.' }
+    if (nova.length < 4) return { erro: 'A nova senha precisa ter pelo menos 4 caracteres.' }
+    banco.setConfig('admin_senha_hash', hashSenha(nova))
+    return { ok: true }
+  })
+
   ipcMain.handle('personagens:listar-custom', () => banco.listarPersonagensCustom())
 
   ipcMain.handle('personagens:listar', () =>
