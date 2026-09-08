@@ -158,6 +158,7 @@ function registrarIpc() {
       nome: p.id,
       nome_exibicao: p.nome,
       avatar: p.emoji,
+      avatarImg: p.avatar,
       cor: p.cor,
       status: 'online',
       ehIa: true,
@@ -199,6 +200,22 @@ function registrarIpc() {
     const t = String(termo || '').trim()
     if (!t) return []
     return banco.buscarMensagens(t, 50)
+  })
+
+  ipcMain.handle('mensagem:traduzir', async (_evento, texto) => {
+    const t = String(texto || '').trim()
+    if (!t) return { traducao: '' }
+    try {
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(t)}&langpair=autodetect%7Cpt-BR`
+      const resposta = await fetch(url)
+      if (!resposta.ok) return { erro: 'Não foi possível traduzir agora.' }
+      const dados = await resposta.json()
+      const traducao = dados?.responseData?.translatedText
+      if (!traducao) return { erro: 'Não foi possível traduzir agora.' }
+      return { traducao }
+    } catch {
+      return { erro: 'Não foi possível traduzir agora.' }
+    }
   })
 
   ipcMain.handle('perfil:atualizar', (_evento, dados) => {
@@ -486,7 +503,9 @@ function registrarIpc() {
       nome: p.nome,
       emoji: p.emoji,
       cor: p.cor,
-      tema: p.tema
+      tema: p.tema,
+      avatar: p.avatar,
+      saudacao: p.saudacao
     }))
   )
 
@@ -778,15 +797,25 @@ function agendarPersonagemNovo() {
   banco.setConfig('ia_contador_msgs', '0')
   criandoPersonagem = true
   criarPersonagemNovo({ provider, apiKey, modelo })
-    .then(({ personagem, custo }) => {
+    .then(async ({ personagem, custo }) => {
       if (custo) registrarGasto(banco, custo)
       if (!personagem) return
       const existentes = banco.listarPersonagensCustom().map((x) => x.nome.toLowerCase())
       if (existentes.includes(personagem.nome.toLowerCase())) return
       const id = `p-${randomUUID().slice(0, 8)}`
-      banco.criarPersonagemCustom(id, personagem.nome, personagem.emoji, personagem.cor, personagem.tema, personagem.saudacao)
+      let avatar = ''
+      const img = configImagem()
+      if (img.enabled && img.apiKey) {
+        try {
+          const promptAvatar = `Retrato de personagem cartoon amigável para criança, estilo digital vibrante, ${personagem.nome}, ${personagem.tema}, fundo liso colorido, sem texto, sem letras`
+          const r = await gerarImagem({ apiKey: img.apiKey, modelo: img.modelo, prompt: promptAvatar })
+          if (r?.custo) registrarGasto(banco, r.custo)
+          if (r?.imagem) avatar = r.imagem
+        } catch {}
+      }
+      banco.criarPersonagemCustom(id, personagem.nome, personagem.emoji, personagem.cor, personagem.tema, personagem.saudacao, avatar)
       if (obterCanal('geral') && !banco.listarCanaisExcluidos().has('geral')) {
-        banco.salvarMensagem('geral', 'Sistema', null, `Um novo amigo chegou: ${personagem.emoji} ${personagem.nome}! ${personagem.saudacao}`)
+        banco.salvarMensagem('geral', 'Sistema', id, `Um novo amigo chegou: ${personagem.emoji} ${personagem.nome}! ${personagem.saudacao}`)
       }
     })
     .catch(() => {})
@@ -911,7 +940,7 @@ async function enviarMensagemProativa() {
 
 function iniciarMensagensProativas() {
   const agendar = () => {
-    const atraso = 180_000 + Math.floor(Math.random() * 180_000) // 3 a 6 minutos
+    const atraso = 480_000 + Math.floor(Math.random() * 420_000) // 8 a 15 minutos
     setTimeout(() => {
       enviarMensagemProativa().finally(agendar)
     }, atraso)

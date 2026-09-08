@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { obterPersonagem, PERSONAGENS } from '@shared/characters.js'
+import { avatarSrc } from '../avatares.js'
+import Icone from '../Icones.jsx'
 
 const EMOJIS = ['💬', '🎮', '🎨', '🎵', '📺', '⚽', '🧪', '🚀', '🐾', '🍕', '📚', '🎬', '🦖', '🐉', '⭐', '🌈', '⚡', '🔥', '🌸', '🧸']
 
@@ -103,6 +105,26 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
       recarregarMensagens()
       tocarSom()
     })
+  }, [])
+
+  useEffect(() => {
+    function aoColar(e) {
+      const items = e.clipboardData?.items
+      if (!items) return
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const arquivo = item.getAsFile()
+          if (!arquivo) continue
+          const leitor = new FileReader()
+          leitor.onload = () => setImagemAnexo(leitor.result)
+          leitor.readAsDataURL(arquivo)
+          e.preventDefault()
+          break
+        }
+      }
+    }
+    window.addEventListener('paste', aoColar)
+    return () => window.removeEventListener('paste', aoColar)
   }, [])
 
   async function recarregarTudo() {
@@ -384,14 +406,14 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
             <span className="meu-nome">{perfil.nome_exibicao || perfil.nome}</span>
           </button>
           <button className="icone" onClick={onSair} title="Sair" aria-label="Sair">
-            ⏻
+            <Icone nome="logout" />
           </button>
         </div>
 
         <div className="canais-cabecalho">
           <span>Canais</span>
           <button className="icone" onClick={abrirModal} title="Criar canal" aria-label="Criar canal">
-            ＋
+            <Icone nome="plus" />
           </button>
         </div>
 
@@ -411,7 +433,7 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
                 title="Remover canal"
                 aria-label="Remover canal"
               >
-                🗑
+                <Icone nome="trash" />
               </button>
             </div>
           ))}
@@ -420,7 +442,7 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
         <div className="canais-cabecalho">
           <span>Amigos {pedidos.length > 0 ? `(${pedidos.length})` : ''}</span>
           <button className="icone" onClick={abrirAmigos} title="Adicionar amigo" aria-label="Adicionar amigo">
-            ＋
+            <Icone nome="plus" />
           </button>
         </div>
 
@@ -440,7 +462,7 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
                 title="Remover amigo"
                 aria-label="Remover amigo"
               >
-                🗑
+                <Icone nome="trash" />
               </button>
             </div>
           ))}
@@ -452,10 +474,10 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
             <span className={`status-ponto ${meuStatus}`} /> {meuStatus === 'online' ? 'Online' : 'Ausente'}
           </button>
           <button className="icone" onClick={pedirConfig} title="Configurações" aria-label="Configurações">
-            ⚙️
+            <Icone nome="gear" />
           </button>
           <button className="icone" onClick={() => setTema(tema === 'escuro' ? 'claro' : 'escuro')} title="Trocar tema">
-            {tema === 'escuro' ? '🌙' : '☀️'}
+            <Icone nome={tema === 'escuro' ? 'moon' : 'sun'} />
           </button>
         </div>
       </aside>
@@ -517,14 +539,14 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => selecionarSugestao(x)}
                 >
-                  <span className="mencao-emoji" style={{ background: x.cor }}>{x.emoji}</span>
+                  <Avatar src={avatarSrc(x)} emoji={x.emoji} cor={x.cor} className="mencao-emoji" />
                   <span className="mencao-nome">{x.nome}</span>
                 </button>
               ))}
             </div>
           )}
-          <button type="button" className="icone anexar" onClick={anexarImagem} title="Anexar imagem" disabled={!conversa}>📎</button>
-          <button type="button" className="icone criar-imagem" onClick={iniciarImagem} title="Criar imagem com IA" disabled={!conversa || enviando}>🎨</button>
+          <button type="button" className="icone anexar" onClick={anexarImagem} title="Anexar imagem" disabled={!conversa}><Icone nome="paperclip" /></button>
+          <button type="button" className="icone criar-imagem" onClick={iniciarImagem} title="Criar imagem com IA" disabled={!conversa || enviando}><Icone nome="brush" /></button>
           <input
             value={texto}
             onChange={(e) => atualizarTexto(e.target.value)}
@@ -553,7 +575,7 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
               title={m.ehIa ? 'Conversar' : undefined}
             >
               {m.ehIa ? (
-                <span className="membro-avatar" style={{ background: m.cor }}>{m.avatar}</span>
+                <Avatar src={avatarSrc({ avatar: m.avatarImg })} emoji={m.avatar} cor={m.cor} className="membro-avatar" />
               ) : m.foto ? (
                 <img className="membro-foto" src={m.foto} alt="" />
               ) : (
@@ -658,7 +680,7 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
                       checked={novosPersonagens.includes(p.id)}
                       onChange={() => alternarPersonagem(p.id)}
                     />
-                    <span className="personagem-ponto" style={{ background: p.cor }}>{p.emoji}</span>
+                    <Avatar src={avatarSrc(p)} emoji={p.emoji} cor={p.cor} className="personagem-ponto" />
                     <span>{p.nome}</span>
                   </label>
                 ))}
@@ -774,18 +796,46 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
 }
 
 function Mensagem({ m, meuNome, amigoAvatar, personagens, editando, editandoTexto, onIniciarEdicao, onSalvarEdicao, onCancelarEdicao, onChangeEdicao, onExcluir }) {
+  const [traducao, setTraducao] = useState('')
+  const [traduzindo, setTraduzindo] = useState(false)
+  async function traduzirMsg() {
+    if (traduzindo) return
+    setTraduzindo(true)
+    const resultado = await window.discordplus.traduzir(m.texto)
+    setTraduzindo(false)
+    if (resultado?.erro) {
+      setTraducao('')
+      return
+    }
+    setTraducao(resultado?.traducao || '')
+  }
   const horario = Number.isFinite(Number(m.criado_em))
     ? new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(Number(m.criado_em)))
     : ''
+  if (m.autor === 'Sistema') {
+    const novo = m.personagem_id
+      ? personagens.find((p) => p.id === m.personagem_id) || obterPersonagem(m.personagem_id)
+      : null
+    return (
+      <div className="msg-sistema">
+        <div className="sistema-card">
+          {novo ? (
+            <Avatar src={avatarSrc(novo)} emoji={novo.emoji} cor={novo.cor} className="sistema-avatar" />
+          ) : (
+            <span className="sistema-icone">🎉</span>
+          )}
+          <div className="sistema-texto">{m.texto}</div>
+        </div>
+      </div>
+    )
+  }
   const personagem = m.personagem_id
     ? personagens.find((p) => p.id === m.personagem_id) || obterPersonagem(m.personagem_id)
     : null
   if (personagem) {
     return (
       <div className="msg personagem">
-        <div className="msg-avatar" style={{ background: personagem.cor }}>
-          {personagem.emoji}
-        </div>
+        <Avatar src={avatarSrc(personagem)} emoji={personagem.emoji} cor={personagem.cor} className="msg-avatar" />
         <div className="msg-corpo">
           <div className="msg-autor">
             <span className="tag-ia">
@@ -794,6 +844,14 @@ function Mensagem({ m, meuNome, amigoAvatar, personagens, editando, editandoText
             {horario && <time dateTime={new Date(Number(m.criado_em)).toISOString()}>{horario}</time>}
           </div>
           <div className="msg-texto">{m.texto}</div>
+          {m.texto && (
+            <div className="msg-traduzir">
+              <button className="icone" onClick={traduzirMsg} disabled={traduzindo} title="Traduzir" aria-label="Traduzir">
+                {traduzindo ? '…' : <Icone nome="translate" />}
+              </button>
+              {traducao && <span className="msg-traducao">{traducao}</span>}
+            </div>
+          )}
           {m.imagem && <img className="msg-imagem" src={m.imagem} alt="Imagem" />}
         </div>
       </div>
@@ -824,14 +882,33 @@ function Mensagem({ m, meuNome, amigoAvatar, personagens, editando, editandoText
         ) : (
           <div className="msg-texto">{m.texto}</div>
         )}
+        {!editando && m.texto && (
+          <div className="msg-traduzir">
+            <button className="icone" onClick={traduzirMsg} disabled={traduzindo} title="Traduzir" aria-label="Traduzir">
+              {traduzindo ? '…' : '🌐'}
+            </button>
+            {traducao && <span className="msg-traducao">{traducao}</span>}
+          </div>
+        )}
         {m.imagem && <img className="msg-imagem" src={m.imagem} alt="Imagem" />}
         {ehMinha && !editando && (
           <div className="msg-acoes">
-            <button className="icone" onClick={onIniciarEdicao} title="Editar" aria-label="Editar">✏️</button>
-            <button className="icone" onClick={onExcluir} title="Excluir" aria-label="Excluir">🗑</button>
+            <button className="icone" onClick={onIniciarEdicao} title="Editar" aria-label="Editar"><Icone nome="pencil" /></button>
+            <button className="icone" onClick={onExcluir} title="Excluir" aria-label="Excluir"><Icone nome="trash" /></button>
           </div>
         )}
       </div>
     </div>
+  )
+}
+
+function Avatar({ src, emoji, cor, className = '' }) {
+  if (src) {
+    return <img className={`${className} avatar-img`} src={src} alt="" />
+  }
+  return (
+    <span className={className} style={{ background: cor }}>
+      {emoji}
+    </span>
   )
 }

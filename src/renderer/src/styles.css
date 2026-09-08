@@ -518,6 +518,27 @@ form input:focus {
   object-fit: cover;
 }
 
+.msg-traduzir {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.msg-traduzir .icone {
+  opacity: 0.7;
+}
+
+.msg-traduzir .icone:hover {
+  opacity: 1;
+}
+
+.msg-traducao {
+  font-style: italic;
+  font-size: 0.92em;
+  color: var(--texto-suave);
+}
+
 .entrada {
   display: flex;
   gap: 10px;
@@ -1298,4 +1319,51 @@ form input:focus {
   color: var(--texto-suave);
   margin-left: 10px;
   vertical-align: middle;
+}
+
+.avatar-img {
+  object-fit: cover;
+}
+
+.msg {
+  border-radius: 8px;
+}
+
+.msg:hover {
+  background: var(--painel-2);
+}
+
+.msg-sistema {
+  display: flex;
+  justify-content: center;
+  margin: 14px 0;
+}
+
+.sistema-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 20px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(88, 101, 242, 0.22), rgba(88, 101, 242, 0.06));
+  border: 1px solid rgba(88, 101, 242, 0.4);
+  max-width: 92%;
+}
+
+.sistema-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sistema-icone {
+  font-size: 38px;
+  line-height: 1;
+}
+
+.sistema-texto {
+  font-size: 14px;
+  color: var(--texto);
+  line-height: 1.45;
 }

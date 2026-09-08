@@ -71,6 +71,7 @@ export function criarDatabase(caminhoDb) {
       cor TEXT DEFAULT '#5865f2',
       tema TEXT DEFAULT '',
       saudacao TEXT DEFAULT '',
+      avatar TEXT DEFAULT '',
       criado_em INTEGER NOT NULL
     );
 
@@ -108,6 +109,7 @@ export function criarDatabase(caminhoDb) {
   garantirColuna('profiles', 'bio', "TEXT DEFAULT ''")
   garantirColuna('profiles', 'foto', "TEXT DEFAULT ''")
   garantirColuna('profiles', 'status', "TEXT DEFAULT 'offline'")
+  garantirColuna('personagens_custom', 'avatar', "TEXT DEFAULT ''")
 
   const criarPerfilStmt = db.prepare(
     'INSERT INTO profiles (nome, senha_hash, avatar, criado_em) VALUES (?, ?, ?, ?)'
@@ -166,10 +168,10 @@ export function criarDatabase(caminhoDb) {
   const estaBloqueadoStmt = db.prepare('SELECT 1 FROM bloqueios WHERE de = ? AND para = ?')
 
   const listarPersonagensCustomStmt = db.prepare(
-    'SELECT id, nome, emoji, cor, tema, saudacao, criado_em FROM personagens_custom ORDER BY criado_em ASC'
+    'SELECT id, nome, emoji, cor, tema, saudacao, avatar, criado_em FROM personagens_custom ORDER BY criado_em ASC'
   )
   const criarPersonagemCustomStmt = db.prepare(
-    'INSERT INTO personagens_custom (id, nome, emoji, cor, tema, saudacao, criado_em) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO personagens_custom (id, nome, emoji, cor, tema, saudacao, avatar, criado_em) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
   )
 
   // Exportação/importação completa (para sincronizar com a nuvem).
@@ -457,9 +459,9 @@ export function criarDatabase(caminhoDb) {
       return listarPersonagensCustomStmt.all()
     },
 
-    criarPersonagemCustom(id, nome, emoji, cor, tema, saudacao) {
-      criarPersonagemCustomStmt.run(id, nome, emoji, cor, tema, saudacao, Date.now())
-      return { id, nome, emoji, cor, tema, saudacao }
+    criarPersonagemCustom(id, nome, emoji, cor, tema, saudacao, avatar = '') {
+      criarPersonagemCustomStmt.run(id, nome, emoji, cor, tema, saudacao, avatar, Date.now())
+      return { id, nome, emoji, cor, tema, saudacao, avatar }
     },
 
     exportarTudo() {
@@ -512,7 +514,7 @@ export function criarDatabase(caminhoDb) {
           inserirMemoriaFullStmt.run(mem.id, mem.de, mem.texto, mem.criado_em || Date.now())
         }
         for (const pc of d.personagens_custom || []) {
-          criarPersonagemCustomStmt.run(pc.id, pc.nome, pc.emoji || '🙂', pc.cor || '#5865f2', pc.tema || '', pc.saudacao || '', pc.criado_em || Date.now())
+          criarPersonagemCustomStmt.run(pc.id, pc.nome, pc.emoji || '🙂', pc.cor || '#5865f2', pc.tema || '', pc.saudacao || '', pc.avatar || '', pc.criado_em || Date.now())
         }
         for (const b of d.bloqueios || []) {
           inserirBloqueioFullStmt.run(b.id, b.de, b.para, b.criado_em || Date.now())

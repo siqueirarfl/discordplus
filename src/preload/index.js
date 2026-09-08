@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('discordplus', {
   editarMensagem: (dados) => ipcRenderer.invoke('mensagem:editar', dados),
   excluirMensagem: (dados) => ipcRenderer.invoke('mensagem:excluir', dados),
   buscarMensagens: (termo) => ipcRenderer.invoke('mensagem:buscar', termo),
+  traduzir: (texto) => ipcRenderer.invoke('mensagem:traduzir', texto),
   criarCanal: (dados) => ipcRenderer.invoke('chat:criar-canal', dados),
   removerCanal: (id) => ipcRenderer.invoke('chat:remover-canal', id),
   listarPersonagensCustom: () => ipcRenderer.invoke('personagens:listar-custom'),

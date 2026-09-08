@@ -5,6 +5,7 @@
 export const PERSONAGENS = [
   {
     id: 'robomax',
+    avatar: 'robomax',
     nome: 'RoboMax',
     emoji: '🤖',
     cor: '#e74c3c',
@@ -13,6 +14,7 @@ export const PERSONAGENS = [
   },
   {
     id: 'pixel',
+    avatar: 'pixel',
     nome: 'Pixel',
     emoji: '🎨',
     cor: '#f1c40f',
@@ -21,6 +23,7 @@ export const PERSONAGENS = [
   },
   {
     id: 'nexty',
+    avatar: 'nexty',
     nome: 'Nexty',
     emoji: '👾',
     cor: '#9b59b6',
@@ -29,6 +32,7 @@ export const PERSONAGENS = [
   },
   {
     id: 'block',
+    avatar: 'block',
     nome: 'Block',
     emoji: '🧱',
     cor: '#3498db',
@@ -37,6 +41,7 @@ export const PERSONAGENS = [
   },
   {
     id: 'maxbot',
+    avatar: 'maxbot',
     nome: 'MaxBot',
     emoji: '⚙️',
     cor: '#2ecc71',
@@ -45,6 +50,7 @@ export const PERSONAGENS = [
   },
   {
     id: 'pibby',
+    avatar: 'pibby',
     nome: 'Pibby',
     emoji: '🎀',
     cor: '#ff69b4',
@@ -53,6 +59,7 @@ export const PERSONAGENS = [
   },
   {
     id: 'luna',
+    avatar: 'luna',
     nome: 'Luna',
     emoji: '🌙',
     cor: '#e67e22',
@@ -62,6 +69,7 @@ export const PERSONAGENS = [
   },
   {
     id: 'fritz',
+    avatar: 'fritz',
     nome: 'Fritz',
     emoji: '🥨',
     cor: '#16a085',
@@ -71,6 +79,7 @@ export const PERSONAGENS = [
   },
   {
     id: 'sakura',
+    avatar: 'sakura',
     nome: 'Sakura',
     emoji: '🌸',
     cor: '#e84393',

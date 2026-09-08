@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { PERSONAGENS } from '@shared/characters.js'
+import { avatarSrc } from '../avatares.js'
 
 const MODELO_PADRAO = 'deepseek-chat'
 
@@ -268,9 +269,13 @@ export default function Configuracoes({ onVoltar }) {
                   checked={inglesIds.includes(p.id)}
                   onChange={() => alternarIngles(p.id)}
                 />
-                <span className="personagem-ponto" style={{ background: p.cor }}>
-                  {p.emoji}
-                </span>
+                {avatarSrc(p) ? (
+                  <img className="personagem-ponto avatar-img" src={avatarSrc(p)} alt="" />
+                ) : (
+                  <span className="personagem-ponto" style={{ background: p.cor }}>
+                    {p.emoji}
+                  </span>
+                )}
                 <span>{p.nome}</span>
               </label>
             ))}
