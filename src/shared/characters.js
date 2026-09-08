@@ -1,61 +1,60 @@
-// Personagens virtuais do Discord+.
-// Todos são apresentados como "Personagem IA" e respondem localmente,
-// sem internet nem API externa. Conteúdo adequado para crianças.
+// Amigos do Discord+: personagens apresentados como crianças da turma.
+// Respondem de forma natural e amigável, adequada para crianças.
 
 export const PERSONAGENS = [
   {
     id: 'robomax',
     avatar: 'robomax',
-    nome: 'RoboMax',
-    emoji: '🤖',
+    nome: 'Max',
+    emoji: '😎',
     cor: '#e74c3c',
     tema: 'Roblox e construções',
-    saudacao: 'Oi! Eu sou o RoboMax, o mestre das construções do Roblox. Bora montar algo incrível?'
+    saudacao: 'Oi! Eu sou o Max. Adoro construir no Roblox. Bora montar algo incrível?'
   },
   {
     id: 'pixel',
     avatar: 'pixel',
-    nome: 'Pixel',
+    nome: 'Lia',
     emoji: '🎨',
     cor: '#f1c40f',
     tema: 'Desenhos e humor leve',
-    saudacao: 'E aí! Sou o Pixel. Gosto de desenhar e de contar piadas bem bobas.'
+    saudacao: 'E aí! Sou a Lia. Gosto de desenhar e de contar piadas bem bobas.'
   },
   {
     id: 'nexty',
     avatar: 'nexty',
-    nome: 'Nexty',
-    emoji: '👾',
+    nome: 'Nico',
+    emoji: '🎮',
     cor: '#9b59b6',
-    tema: 'NextBots e Garry\'s Mod',
-    saudacao: 'Boo! Sou o Nexty. Adoro NextBots e as loucuras do Garry\'s Mod. Cuidado com o que se esconde atrás de você!'
+    tema: 'Jogos e desafios',
+    saudacao: 'E aí! Sou o Nico. Adoro jogos e desafios. Bora jogar juntos?'
   },
   {
     id: 'block',
     avatar: 'block',
-    nome: 'Block',
-    emoji: '🧱',
+    nome: 'Léo',
+    emoji: '🧩',
     cor: '#3498db',
     tema: 'Mapas, desafios e estratégias',
-    saudacao: 'Olá! Sou o Block. Gosto de mapas, desafios e de planejar estratégias para vencer.'
+    saudacao: 'Olá! Sou o Léo. Gosto de mapas, desafios e de planejar estratégias para vencer.'
   },
   {
     id: 'maxbot',
     avatar: 'maxbot',
-    nome: 'MaxBot',
-    emoji: '⚙️',
+    nome: 'Téo',
+    emoji: '🚀',
     cor: '#2ecc71',
-    tema: 'Ajuda com o aplicativo',
-    saudacao: 'Oi! Sou o MaxBot e estou aqui para te ajudar a usar o Discord+. Qualquer dúvida, é só me chamar.'
+    tema: 'Foguetes, ciência e invenções',
+    saudacao: 'Oi! Sou o Téo. Adoro foguetes, ciência e inventar coisas novas. Vamos explorar juntos?'
   },
   {
     id: 'pibby',
     avatar: 'pibby',
-    nome: 'Pibby',
+    nome: 'Mel',
     emoji: '🎀',
     cor: '#ff69b4',
     tema: 'Desenhos e aventuras',
-    saudacao: 'Oi! Eu sou a Pibby! No meu mundo dos desenhos sempre tem uma aventura nova. Vamos juntos?'
+    saudacao: 'Oi! Eu sou a Mel! No mundo dos desenhos sempre tem uma aventura nova. Vamos juntos?'
   },
   {
     id: 'luna',

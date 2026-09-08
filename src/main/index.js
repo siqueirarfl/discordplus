@@ -818,7 +818,7 @@ function agendarPersonagemNovo() {
       const img = configImagem()
       if (img.enabled && img.apiKey) {
         try {
-          const promptAvatar = `Retrato de personagem cartoon amigável para criança, estilo digital vibrante, ${personagem.nome}, ${personagem.tema}, fundo liso colorido, sem texto, sem letras`
+          const promptAvatar = `Ilustração amigável de uma criança de 11 anos, estilo cartoon colorido e alegre, ${personagem.nome}, ${personagem.tema}, fundo liso colorido, sem texto, sem letras`
           const r = await gerarImagem({ apiKey: img.apiKey, modelo: img.modelo, prompt: promptAvatar })
           if (r?.custo) registrarGasto(banco, r.custo)
           if (r?.imagem) avatar = r.imagem

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { obterPersonagem, PERSONAGENS } from '@shared/characters.js'
 import { avatarSrc } from '../avatares.js'
 import Icone from '../Icones.jsx'
+import { tocarSomMensagem } from '../sons.js'
 
 const EMOJIS = ['💬', '🎮', '🎨', '🎵', '📺', '⚽', '🧪', '🚀', '🐾', '🍕', '📚', '🎬', '🦖', '🐉', '⭐', '🌈', '⚡', '🔥', '🌸', '🧸']
 
@@ -11,6 +12,7 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
   const [pedidos, setPedidos] = useState([])
   const [conversa, setConversa] = useState(null)
   const [mensagens, setMensagens] = useState([])
+  const [naoLidas, setNaoLidas] = useState({})
   const [texto, setTexto] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [imagemAnexo, setImagemAnexo] = useState('')
@@ -51,6 +53,7 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
     if (!conversa) return
     if (conversa.tipo === 'canal') {
       window.discordplus.listarMensagens(conversa.id).then(setMensagens)
+      setNaoLidas((atual) => (atual[conversa.id] ? { ...atual, [conversa.id]: 0 } : atual))
     } else {
       window.discordplus.listarDm({ a: perfil.nome, b: conversa.nome }).then(setMensagens)
     }
@@ -73,22 +76,10 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
     conversaRef.current = conversa
   }, [conversa])
 
-  function tocarSom() {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)()
-      const o = ctx.createOscillator()
-      const g = ctx.createGain()
-      o.connect(g)
-      g.connect(ctx.destination)
-      o.type = 'sine'
-      o.frequency.value = 880
-      g.gain.setValueAtTime(0.001, ctx.currentTime)
-      g.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.02)
-      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25)
-      o.start()
-      o.stop(ctx.currentTime + 0.26)
-    } catch {}
-  }
+  useEffect(() => {
+    const total = Object.values(naoLidas).reduce((a, b) => a + (b || 0), 0)
+    document.title = total > 0 ? `(${total}) Discord+` : 'Discord+'
+  }, [naoLidas])
 
   async function recarregarMensagens() {
     const c = conversaRef.current
@@ -101,9 +92,14 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
   }
 
   useEffect(() => {
-    return window.discordplus.onMensagemProativa(() => {
+    return window.discordplus.onMensagemProativa((dados) => {
+      tocarSomMensagem()
       recarregarMensagens()
-      tocarSom()
+      const canal = dados?.canal
+      if (!canal) return
+      const ativo = conversaRef.current
+      if (ativo?.tipo === 'canal' && ativo.id === canal) return
+      setNaoLidas((atual) => ({ ...atual, [canal]: (atual[canal] || 0) + 1 }))
     })
   }, [])
 
@@ -426,6 +422,7 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
               >
                 <span className="canal-emoji">{c.emoji}</span>
                 <span className="canal-nome">{c.nome}</span>
+                {naoLidas[c.id] > 0 && <span className="canal-badge">{naoLidas[c.id]}</span>}
               </button>
               <button
                 className="icone canal-remover"
@@ -546,7 +543,7 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
             </div>
           )}
           <button type="button" className="icone anexar" onClick={anexarImagem} title="Anexar imagem" disabled={!conversa}><Icone nome="paperclip" /></button>
-          <button type="button" className="icone criar-imagem" onClick={iniciarImagem} title="Criar imagem com IA" disabled={!conversa || enviando}><Icone nome="brush" /></button>
+          <button type="button" className="icone criar-imagem" onClick={iniciarImagem} title="Desenhar" disabled={!conversa || enviando}><Icone nome="brush" /></button>
           <input
             value={texto}
             onChange={(e) => atualizarTexto(e.target.value)}
@@ -582,7 +579,6 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
                 <span className="membro-avatar">{m.avatar || '🙂'}</span>
               )}
               <span className="membro-nome">{m.nome_exibicao || m.nome}</span>
-              {m.ehIa && <span className="tag-ia">· personagem IA</span>}
               <span className={`status-ponto ${m.status || 'offline'}`} />
             </div>
           ))}
@@ -671,7 +667,7 @@ export default function Chat({ perfil, tema, setTema, onSair, onAbrirConfig, onA
             </div>
 
             <div className="campo">
-              <span>Personagens que respondem aqui</span>
+              <span>Amigos deste canal</span>
               <div className="personagens-lista">
                 {PERSONAGENS.map((p) => (
                   <label key={p.id} className="personagem-opcao">
@@ -839,7 +835,7 @@ function Mensagem({ m, meuNome, amigoAvatar, personagens, editando, editandoText
         <div className="msg-corpo">
           <div className="msg-autor">
             <span className="tag-ia">
-              {personagem.nome} <em>· personagem IA</em>
+              {personagem.nome}
             </span>
             {horario && <time dateTime={new Date(Number(m.criado_em)).toISOString()}>{horario}</time>}
           </div>

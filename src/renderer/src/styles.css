@@ -1367,3 +1367,43 @@ form input:focus {
   color: var(--texto);
   line-height: 1.45;
 }
+
+.canal-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #ed4245;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canal,
+.icone,
+.servidor,
+.msg-texto,
+.entrada input {
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.conversa-topo {
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+}
+
+.entrada input {
+  background: var(--painel-2);
+  border: 1px solid transparent;
+}
+
+.entrada input:focus {
+  border-color: var(--marca);
+}
+
+.msg-texto {
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+}

@@ -10,8 +10,8 @@ const BASES = {
 
 // Regras de segurança aplicadas a TODO prompt enviado à IA.
 const REGRAS_SEGURANCA = [
-  'Você está em um aplicativo para uma criança de 11 anos.',
-  'Você é um personagem virtual identificado como IA na interface; nunca afirme ser uma pessoa ou criança real.',
+  'Você está em um aplicativo de amigos para uma criança de 11 anos.',
+  'Você é uma criança de 11 anos, amiga dela. Nunca revele que é uma IA, robô, programa ou personagem; fale como uma criança de verdade.',
   'Fale de forma simples, brincalhona, curiosa e empolgada, adequada à idade.',
   'Seja educativo com naturalidade: explique, ensine e incentive a curiosidade sem parecer uma aula chata.',
   'Responda SEMPRE de forma amigável e curta (1 a 3 frases).',
@@ -45,7 +45,7 @@ export async function gerarRespostaIa({ provider, apiKey, modelo, personagem, te
   const memoriasTxt = memorias.length
     ? `\nVocê já sabe estas coisas sobre a criança (lembre com naturalidade, sem repetir tudo): ${memorias.join('; ')}.`
     : ''
-  const system = `${REGRAS_SEGURANCA}${memoriasTxt}\nVocê é "${personagem.nome}" ${personagem.emoji}, sobre "${personagem.tema}". Fale como essa personagem, em primeira pessoa. ${idiomaTxt}`
+  const system = `${REGRAS_SEGURANCA}${memoriasTxt}\nVocê é "${personagem.nome}", uma criança de 11 anos. Você gosta de: ${personagem.tema}. Fale em primeira pessoa, como uma criança de verdade, sem jamais dizer que é IA ou robô. ${idiomaTxt}`
 
   const res = await fetch(`${base}/chat/completions`, {
     method: 'POST',
@@ -163,11 +163,11 @@ export async function criarPersonagemNovo({ provider, apiKey, modelo }) {
   const base = BASES[provider] || 'https://api.deepseek.com'
   const system = [
     REGRAS_SEGURANCA,
-    'Invente um personagem amigável e criativo para o aplicativo.',
+    'Invente um novo amigo (uma criança de 11 anos) para a turma.',
     'Responda SOMENTE com um JSON válido, sem texto extra, neste formato exato:',
     '{"nome":"...","emoji":"um único emoji","cor":"#hex","tema":"...","saudacao":"..."}',
-    'Não repita os nomes: RoboMax, Pixel, Nexty, Block, MaxBot, Pibby.',
-    'Use nome e tema positivos para criança.'
+    'Não repita os nomes: Max, Lia, Nico, Léo, Téo, Mel, Luna, Fritz, Sakura.',
+    'Use um nome de criança de verdade e um tema positivo (hobby, esporte, desenho).'
   ].join('\n')
 
   const res = await fetch(`${base}/chat/completions`, {
